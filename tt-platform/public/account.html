@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>My Account — Discover Port of Spain</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fdf6ec; color: #2a2a2a; }
+  header {
+    background: linear-gradient(135deg, #e0562f, #f2a33c); color: #fff;
+    padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;
+  }
+  header a { color: #fff; text-decoration: none; font-size: 14px; opacity: 0.9; }
+  header h1 { font-size: 18px; }
+  .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px 60px; }
+  .card {
+    background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 18px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  h2 { font-size: 17px; margin-bottom: 12px; }
+  label { display: block; font-size: 12px; text-transform: uppercase; color: #999; margin: 12px 0 5px; }
+  input, textarea {
+    width: 100%; padding: 9px 10px; background: #fdf6ec; border: 1px solid #e8dcc8;
+    border-radius: 6px; color: #2a2a2a; font-size: 14px;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  button {
+    margin-top: 14px; width: 100%; padding: 10px; background: #e0562f; color: #fff;
+    border: none; border-radius: 6px; font-weight: 700; cursor: pointer;
+  }
+  button.secondary { background: #f0e4d0; color: #2a2a2a; }
+  button.danger { background: #c94a3a; width: auto; padding: 6px 12px; font-size: 12px; }
+  .msg { margin-top: 10px; font-size: 13px; color: #e0562f; min-height: 16px; }
+  .tabRow { display: flex; gap: 8px; margin-bottom: 14px; }
+  .tabRow button { margin-top: 0; flex: 1; background: #f0e4d0; color: #2a2a2a; }
+  .tabRow button.active { background: #e0562f; color: #fff; }
+  #app > div { display: none; }
+  hr { border: none; border-top: 1px solid #eee; margin: 18px 0; }
+  .listingRow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px;
+  }
+  .planBadge {
+    display: inline-block; background: #f0e4d0; color: #7a5c30; padding: 4px 10px;
+    border-radius: 20px; font-size: 12px; font-weight: 700;
+  }
+  .premiumNote { color: #999; font-size: 13px; margin-top: 10px; line-height: 1.5; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🇹🇹 My Account</h1>
+  <a href="/">← Back to site</a>
+</header>
+
+<div class="wrap" id="app">
+
+  <div id="authView" style="display:block;">
+    <div class="card">
+      <div class="tabRow">
+        <button id="tabLogin" class="active">Log In</button>
+        <button id="tabSignup">Sign Up</button>
+      </div>
+      <div id="loginForm">
+        <label>Email</label>
+        <input type="email" id="loginEmail">
+        <label>Password</label>
+        <input type="password" id="loginPassword">
+        <button id="loginBtn">Log In</button>
+      </div>
+      <div id="signupForm" style="display:none;">
+        <label>Email</label>
+        <input type="email" id="signupEmail">
+        <label>Password (6+ characters)</label>
+        <input type="password" id="signupPassword">
+        <button id="signupBtn">Create Account</button>
+      </div>
+      <div class="msg" id="authMsg"></div>
+    </div>
+  </div>
+
+  <div id="mainView" style="display:none;">
+    <div class="card">
+      <h2>Add Your Business</h2>
+      <label>Business Name</label>
+      <input type="text" id="bName">
+      <label>Description</label>
+      <textarea id="bDescription"></textarea>
+      <label>Address</label>
+      <input type="text" id="bAddress">
+      <label>Phone</label>
+      <input type="text" id="bPhone">
+      <label>Hours</label>
+      <input type="text" id="bHours" placeholder="e.g. Mon-Sat 11am-9pm">
+      <label>Image URL (optional)</label>
+      <input type="text" id="bImageUrl">
+      <hr>
+      <label>Deal Title (optional)</label>
+      <input type="text" id="bDealTitle">
+      <label>Deal Description</label>
+      <textarea id="bDealDescription"></textarea>
+      <label>Deal Ends (optional)</label>
+      <input type="date" id="bDealEndDate">
+      <button id="addBizBtn">Add Business</button>
+      <div class="msg" id="addMsg"></div>
+    </div>
+
+    <div class="card">
+      <h2>Your Listings</h2>
+      <div id="myListings"></div>
+    </div>
+
+    <div class="card">
+      <h2>Settings</h2>
+      <p>Signed in as <b id="meEmail"></b></p>
+      <p style="margin-top:10px;">Current plan: <span class="planBadge" id="planBadge">Free</span></p>
+      <p class="premiumNote">Premium (coming soon) will unlock featured placement, more photos per listing, and posting more frequent deals.</p>
+      <button class="secondary" id="logoutBtn">Log Out</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let token = localStorage.getItem('ttp_token') || '';
+
+function showView(view){
+  document.getElementById('authView').style.display = view === 'auth' ? 'block' : 'none';
+  document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
+}
+
+document.getElementById('tabLogin').addEventListener('click', () => {
+  document.getElementById('tabLogin').classList.add('active');
+  document.getElementById('tabSignup').classList.remove('active');
+  document.getElementById('loginForm').style.display = 'block';
+  document.getElementById('signupForm').style.display = 'none';
+});
+document.getElementById('tabSignup').addEventListener('click', () => {
+  document.getElementById('tabSignup').classList.add('active');
+  document.getElementById('tabLogin').classList.remove('active');
+  document.getElementById('signupForm').style.display = 'block';
+  document.getElementById('loginForm').style.display = 'none';
+});
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const email = document.getElementById('loginEmail').value;
+  const password = document.getElementById('loginPassword').value;
+  const res = await fetch('/api/login', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (res.ok){ token = data.token; localStorage.setItem('ttp_token', token); enterApp(); }
+  else document.getElementById('authMsg').textContent = data.error || 'Could not log in.';
+});
+
+document.getElementById('signupBtn').addEventListener('click', async () => {
+  const email = document.getElementById('signupEmail').value;
+  const password = document.getElementById('signupPassword').value;
+  const res = await fetch('/api/signup', {
+    method: 'POST', headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password })
+  });
+  const data = await res.json();
+  if (res.ok){ token = data.token; localStorage.setItem('ttp_token', token); enterApp(); }
+  else document.getElementById('authMsg').textContent = data.error || 'Could not sign up.';
+});
+
+document.getElementById('logoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('ttp_token');
+  token = '';
+  showView('auth');
+});
+
+document.getElementById('addBizBtn').addEventListener('click', async () => {
+  const body = {
+    name: document.getElementById('bName').value,
+    description: document.getElementById('bDescription').value,
+    address: document.getElementById('bAddress').value,
+    phone: document.getElementById('bPhone').value,
+    hours: document.getElementById('bHours').value,
+    imageUrl: document.getElementById('bImageUrl').value,
+    dealTitle: document.getElementById('bDealTitle').value,
+    dealDescription: document.getElementById('bDealDescription').value,
+    dealEndDate: document.getElementById('bDealEndDate').value
+  };
+  const res = await fetch('/api/my/businesses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+    body: JSON.stringify(body)
+  });
+  const data = await res.json();
+  if (res.ok){
+    document.getElementById('addMsg').textContent = 'Added! It\'s live on the site now.';
+    ['bName','bDescription','bAddress','bPhone','bHours','bImageUrl','bDealTitle','bDealDescription','bDealEndDate'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    loadMyListings();
+  } else {
+    document.getElementById('addMsg').textContent = data.error || 'Could not add business.';
+  }
+});
+
+async function loadMyListings(){
+  const res = await fetch('/api/my/businesses', { headers: { 'x-auth-token': token } });
+  if (!res.ok) return;
+  const list = await res.json();
+  const box = document.getElementById('myListings');
+  box.innerHTML = list.length ? '' : '<p style="color:#999;font-size:13px;">You haven\'t added any listings yet.</p>';
+  list.forEach(biz => {
+    const row = document.createElement('div');
+    row.className = 'listingRow';
+    row.innerHTML = `<span>${biz.name}</span>`;
+    const delBtn = document.createElement('button');
+    delBtn.className = 'danger';
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', async () => {
+      await fetch('/api/my/businesses/' + biz._id, { method: 'DELETE', headers: { 'x-auth-token': token } });
+      loadMyListings();
+    });
+    row.appendChild(delBtn);
+    box.appendChild(row);
+  });
+}
+
+async function enterApp(){
+  const res = await fetch('/api/me', { headers: { 'x-auth-token': token } });
+  if (!res.ok){ showView('auth'); return; }
+  const data = await res.json();
+  document.getElementById('meEmail').textContent = data.email;
+  document.getElementById('planBadge').textContent = data.plan === 'premium' ? 'Premium' : 'Free';
+  showView('main');
+  loadMyListings();
+}
+
+if (token) enterApp(); else showView('auth');
+</script>
+</body>
+</html>
