@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discover Port of Spain</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, sans-serif;
+    background: #fdf6ec;
+    color: #2a2a2a;
+  }
+  header {
+    background: linear-gradient(135deg, #e0562f, #f2a33c);
+    color: #fff;
+    padding: 28px 20px 36px;
+    text-align: center;
+  }
+  header h1 { font-size: 26px; letter-spacing: 0.5px; }
+  header p { margin-top: 6px; font-size: 14px; opacity: 0.95; }
+  .searchWrap { max-width: 480px; margin: 18px auto 0; padding: 0 12px; }
+  #searchInput {
+    width: 100%; padding: 12px 16px; border-radius: 30px; border: none;
+    font-size: 15px; box-shadow: 0 2px 10px rgba(0,0,0,0.15);
+  }
+  main { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
+  section { margin-bottom: 34px; }
+  .sectionTitle {
+    font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #2a2a2a;
+    display: flex; align-items: center; gap: 8px;
+  }
+  .cardGrid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
+  }
+  .card {
+    background: #fff; border-radius: 12px; overflow: hidden; cursor: pointer;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.15s;
+  }
+  .card:hover { transform: translateY(-2px); }
+  .card .cardImg {
+    width: 100%; height: 120px; background: #f0d9c0; background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center; font-size: 32px;
+  }
+  .card .cardBody { padding: 12px 14px; }
+  .card .cardName { font-weight: 700; font-size: 15px; }
+  .card .cardMeta { font-size: 12px; color: #888; margin-top: 3px; }
+  .dealBadge {
+    display: inline-block; margin-top: 6px; background: #e0562f; color: #fff;
+    font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600;
+  }
+  .emptyState { color: #999; font-size: 14px; padding: 20px 0; }
+
+  #detailModal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
+    display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+  }
+  #detailPanel {
+    background: #fff; border-radius: 14px; max-width: 460px; width: 100%;
+    max-height: 85vh; overflow-y: auto;
+  }
+  #detailPanel .cardImg { height: 160px; border-radius: 14px 14px 0 0; }
+  #detailContent { padding: 20px; }
+  #detailContent h2 { font-size: 20px; margin-bottom: 4px; }
+  #detailContent .meta { color: #888; font-size: 13px; margin-bottom: 10px; }
+  #detailContent .desc { font-size: 14px; line-height: 1.5; margin-bottom: 14px; }
+  #detailContent .row { font-size: 13px; margin-bottom: 6px; }
+  #detailContent .row b { color: #555; }
+  #detailClose {
+    margin-top: 16px; width: 100%; padding: 10px; background: #e0562f; color: #fff;
+    border: none; border-radius: 8px; font-weight: 700; cursor: pointer;
+  }
+  footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>🇹🇹 Discover Port of Spain</h1>
+  <p>Local restaurants, deals, and eats — right now</p>
+  <div class="searchWrap">
+    <input type="text" id="searchInput" placeholder="Search restaurants...">
+  </div>
+</header>
+
+<main>
+  <section>
+    <div class="sectionTitle">🔥 Deals happening now</div>
+    <div class="cardGrid" id="dealsGrid"><div class="emptyState">Loading...</div></div>
+  </section>
+  <section>
+    <div class="sectionTitle">📍 All restaurants</div>
+    <div class="cardGrid" id="allGrid"><div class="emptyState">Loading...</div></div>
+  </section>
+</main>
+
+<footer>Built for Port of Spain, Trinidad &amp; Tobago 🇹🇹</footer>
+
+<div id="detailModal">
+  <div id="detailPanel">
+    <div class="cardImg" id="detailImg">🍽️</div>
+    <div id="detailContent"></div>
+  </div>
+</div>
+
+<script>
+let allBusinesses = [];
+
+function activeDeals(biz){
+  const now = new Date();
+  return (biz.deals || []).filter(d => !d.endDate || new Date(d.endDate) >= now);
+}
+
+function cardHtml(biz){
+  const deals = activeDeals(biz);
+  const imgStyle = biz.imageUrl ? `style="background-image:url('${biz.imageUrl.replace(/'/g,"")}')"` : '';
+  return `<div class="card" onclick="openDetail('${biz._id}')">
+    <div class="cardImg" ${imgStyle}>${biz.imageUrl ? '' : '🍽️'}</div>
+    <div class="cardBody">
+      <div class="cardName">${escapeHtml(biz.name)}</div>
+      <div class="cardMeta">${escapeHtml(biz.hours || '')}</div>
+      ${deals.length ? `<div class="dealBadge">${escapeHtml(deals[0].title)}</div>` : ''}
+    </div>
+  </div>`;
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s || '';
+  return d.innerHTML;
+}
+
+async function loadBusinesses(query){
+  const url = '/api/businesses' + (query ? '?q=' + encodeURIComponent(query) : '');
+  const res = await fetch(url);
+  allBusinesses = await res.json();
+  render();
+}
+
+function render(){
+  const dealsGrid = document.getElementById('dealsGrid');
+  const allGrid = document.getElementById('allGrid');
+
+  const withDeals = allBusinesses.filter(b => activeDeals(b).length > 0);
+  dealsGrid.innerHTML = withDeals.length
+    ? withDeals.map(cardHtml).join('')
+    : '<div class="emptyState">No active deals right now — check back soon!</div>';
+
+  allGrid.innerHTML = allBusinesses.length
+    ? allBusinesses.map(cardHtml).join('')
+    : '<div class="emptyState">No listings yet.</div>';
+}
+
+function openDetail(id){
+  const biz = allBusinesses.find(b => b._id === id);
+  if (!biz) return;
+  const deals = activeDeals(biz);
+  document.getElementById('detailImg').style.backgroundImage = biz.imageUrl ? `url('${biz.imageUrl}')` : '';
+  document.getElementById('detailImg').textContent = biz.imageUrl ? '' : '🍽️';
+  document.getElementById('detailContent').innerHTML = `
+    <h2>${escapeHtml(biz.name)}</h2>
+    <div class="meta">${escapeHtml(biz.category)} · ${escapeHtml(biz.area)}</div>
+    <div class="desc">${escapeHtml(biz.description)}</div>
+    ${biz.address ? `<div class="row"><b>Address:</b> ${escapeHtml(biz.address)}</div>` : ''}
+    ${biz.phone ? `<div class="row"><b>Phone:</b> ${escapeHtml(biz.phone)}</div>` : ''}
+    ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(biz.hours)}</div>` : ''}
+    ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
+    <button id="detailClose">Close</button>
+  `;
+  document.getElementById('detailModal').style.display = 'flex';
+  document.getElementById('detailClose').addEventListener('click', () => {
+    document.getElementById('detailModal').style.display = 'none';
+  });
+}
+document.getElementById('detailModal').addEventListener('click', (e) => {
+  if (e.target.id === 'detailModal') document.getElementById('detailModal').style.display = 'none';
+});
+
+let searchTimer = null;
+document.getElementById('searchInput').addEventListener('input', (e) => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => loadBusinesses(e.target.value), 250);
+});
+
+loadBusinesses();
+</script>
+</body>
+</html>

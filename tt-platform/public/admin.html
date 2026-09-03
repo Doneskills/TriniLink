@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin — TT Local Platform</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1410; color: #f5ede1; padding: 20px; }
+  .wrap { max-width: 480px; margin: 0 auto; }
+  h1 { font-size: 20px; margin-bottom: 18px; color: #f2a33c; }
+  label { display: block; font-size: 12px; text-transform: uppercase; color: #cbbfae; margin: 14px 0 5px; }
+  input, textarea {
+    width: 100%; padding: 9px 10px; background: #241c15; border: 1px solid #4a3a28;
+    border-radius: 6px; color: #f5ede1; font-size: 14px;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  button {
+    margin-top: 16px; width: 100%; padding: 11px; background: #e0562f; color: #fff;
+    border: none; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 14px;
+  }
+  button:hover { background: #ec6b45; }
+  .msg { margin-top: 10px; font-size: 13px; color: #f2a33c; min-height: 18px; }
+  #loginBox, #panel { display: none; }
+  .bizRow {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 0; border-bottom: 1px solid #3a2e21; font-size: 13px;
+  }
+  .bizRow button {
+    width: auto; margin: 0; padding: 6px 12px; background: #7a2c2c; font-size: 12px;
+  }
+  hr { border: none; border-top: 1px solid #3a2e21; margin: 24px 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>🛠️ Admin — Add a Business</h1>
+
+  <div id="loginBox">
+    <label>Admin Password</label>
+    <input type="password" id="passwordInput">
+    <button id="loginBtn">Log In</button>
+    <div class="msg" id="loginMsg"></div>
+  </div>
+
+  <div id="panel">
+    <label>Business Name</label>
+    <input type="text" id="name">
+    <label>Description</label>
+    <textarea id="description"></textarea>
+    <label>Address</label>
+    <input type="text" id="address">
+    <label>Phone</label>
+    <input type="text" id="phone">
+    <label>Hours (e.g. Mon-Sat 11am-9pm)</label>
+    <input type="text" id="hours">
+    <label>Image URL (optional)</label>
+    <input type="text" id="imageUrl">
+
+    <hr>
+    <label>Deal Title (optional)</label>
+    <input type="text" id="dealTitle" placeholder="e.g. 20% off lunch specials">
+    <label>Deal Description</label>
+    <textarea id="dealDescription"></textarea>
+    <label>Deal Ends (optional date)</label>
+    <input type="date" id="dealEndDate">
+
+    <button id="addBtn">Add Business</button>
+    <div class="msg" id="addMsg"></div>
+
+    <hr>
+    <h1 style="font-size:16px;">Existing Listings</h1>
+    <div id="bizList"></div>
+  </div>
+</div>
+
+<script>
+let adminPassword = '';
+
+document.getElementById('loginBtn').addEventListener('click', async () => {
+  const pw = document.getElementById('passwordInput').value;
+  const res = await fetch('/api/admin/check', { method: 'POST', headers: { 'x-admin-password': pw } });
+  if (res.ok){
+    adminPassword = pw;
+    document.getElementById('loginBox').style.display = 'none';
+    document.getElementById('panel').style.display = 'block';
+    loadList();
+  } else {
+    document.getElementById('loginMsg').textContent = 'Incorrect password.';
+  }
+});
+
+document.getElementById('addBtn').addEventListener('click', async () => {
+  const body = {
+    name: document.getElementById('name').value,
+    description: document.getElementById('description').value,
+    address: document.getElementById('address').value,
+    phone: document.getElementById('phone').value,
+    hours: document.getElementById('hours').value,
+    imageUrl: document.getElementById('imageUrl').value,
+    dealTitle: document.getElementById('dealTitle').value,
+    dealDescription: document.getElementById('dealDescription').value,
+    dealEndDate: document.getElementById('dealEndDate').value
+  };
+  if (!body.name.trim()){
+    document.getElementById('addMsg').textContent = 'Name is required.';
+    return;
+  }
+  const res = await fetch('/api/admin/businesses', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'x-admin-password': adminPassword },
+    body: JSON.stringify(body)
+  });
+  if (res.ok){
+    document.getElementById('addMsg').textContent = 'Added!';
+    ['name','description','address','phone','hours','imageUrl','dealTitle','dealDescription','dealEndDate'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    loadList();
+  } else {
+    document.getElementById('addMsg').textContent = 'Could not add business.';
+  }
+});
+
+async function loadList(){
+  const res = await fetch('/api/businesses');
+  const list = await res.json();
+  const box = document.getElementById('bizList');
+  box.innerHTML = list.length ? '' : '<div class="msg">No listings yet.</div>';
+  list.forEach(biz => {
+    const row = document.createElement('div');
+    row.className = 'bizRow';
+    row.innerHTML = `<span>${biz.name}</span>`;
+    const delBtn = document.createElement('button');
+    delBtn.textContent = 'Delete';
+    delBtn.addEventListener('click', async () => {
+      await fetch('/api/admin/businesses/' + biz._id, { method: 'DELETE', headers: { 'x-admin-password': adminPassword } });
+      loadList();
+    });
+    row.appendChild(delBtn);
+    box.appendChild(row);
+  });
+}
+
+document.getElementById('loginBox').style.display = 'block';
+</script>
+</body>
+</html>

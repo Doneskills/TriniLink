@@ -1,0 +1,11 @@
+{
+  "name": "tt-local-platform",
+  "version": "1.0.0",
+  "description": "Trinidad & Tobago local business discovery platform",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "dependencies": {
+    "express": "^4.19.2",
+    "mongodb": "^6.7.0"
+  }
+}
