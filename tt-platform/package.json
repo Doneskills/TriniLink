@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Trinidad & Tobago local business discovery platform",
   "main": "server.js",
+  "engines": { "node": ">=18" },
   "scripts": { "start": "node server.js" },
   "dependencies": {
     "express": "^4.19.2",

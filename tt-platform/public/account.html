@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>My Account — Discover Port of Spain</title>
+<title>My Account — TT Discover</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fdf6ec; color: #2a2a2a; }
@@ -37,6 +37,12 @@
   .tabRow button.active { background: #e0562f; color: #fff; }
   #app > div { display: none; }
   hr { border: none; border-top: 1px solid #eee; margin: 18px 0; }
+  .dropZone {
+    border: 2px dashed #e8dcc8; border-radius: 10px; padding: 20px; text-align: center;
+    cursor: pointer; font-size: 13px; color: #aaa; transition: border-color 0.2s;
+  }
+  .dropZone.dragover { border-color: #e0562f; color: #e0562f; }
+  .dropZone img { max-width: 100%; max-height: 160px; border-radius: 8px; }
   .listingRow {
     display: flex; justify-content: space-between; align-items: center;
     padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px;
@@ -94,8 +100,14 @@
       <input type="text" id="bPhone">
       <label>Hours</label>
       <input type="text" id="bHours" placeholder="e.g. Mon-Sat 11am-9pm">
-      <label>Image URL (optional)</label>
-      <input type="text" id="bImageUrl">
+      <label>Photo (optional)</label>
+      <div id="dropZone" class="dropZone">
+        <div id="dropZoneText">📷 Drag &amp; drop a photo here, or click to choose</div>
+        <img id="imagePreview" style="display:none;">
+      </div>
+      <input type="file" id="fileInput" accept="image/*" style="display:none;">
+      <div id="useUrlToggle" style="font-size:12px;color:#999;margin-top:6px;cursor:pointer;text-decoration:underline;">or paste an image link instead</div>
+      <input type="text" id="bImageUrl" style="display:none;margin-top:6px;" placeholder="https://...">
       <hr>
       <label>Deal Title (optional)</label>
       <input type="text" id="bDealTitle">
@@ -125,6 +137,58 @@
 
 <script>
 let token = localStorage.getItem('ttp_token') || '';
+
+// ---------------- Drag-and-drop image picker ----------------
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const imagePreview = document.getElementById('imagePreview');
+const dropZoneText = document.getElementById('dropZoneText');
+const imageUrlInput = document.getElementById('bImageUrl');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleImageFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleImageFile(e.target.files[0]); });
+
+function handleImageFile(file){
+  if (!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 800;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim){
+        if (w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      imageUrlInput.value = dataUrl;
+      imagePreview.src = dataUrl;
+      imagePreview.style.display = 'block';
+      dropZoneText.style.display = 'none';
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function resetImagePicker(){
+  imagePreview.style.display = 'none';
+  imagePreview.src = '';
+  dropZoneText.style.display = 'block';
+  imageUrlInput.style.display = 'none';
+}
+document.getElementById('useUrlToggle').addEventListener('click', () => {
+  imageUrlInput.style.display = imageUrlInput.style.display === 'none' ? 'block' : 'none';
+});
 
 function showView(view){
   document.getElementById('authView').style.display = view === 'auth' ? 'block' : 'none';
@@ -197,6 +261,7 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     ['bName','bDescription','bAddress','bPhone','bHours','bImageUrl','bDealTitle','bDealDescription','bDealEndDate'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    resetImagePicker();
     loadMyListings();
   } else {
     document.getElementById('addMsg').textContent = data.error || 'Could not add business.';

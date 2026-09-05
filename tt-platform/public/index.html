@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Discover Port of Spain</title>
+<title>TT Discover</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -16,7 +16,27 @@
     color: #fff;
     padding: 28px 20px 36px;
     text-align: center;
+    position: relative;
   }
+  .navBtns { position: absolute; top: 16px; right: 16px; display: flex; gap: 8px; }
+  .navBtn {
+    width: 40px; height: 40px; border-radius: 50%; background: rgba(255,255,255,0.2);
+    border: 1.5px solid rgba(255,255,255,0.6); color: #fff; font-size: 18px;
+    display: flex; align-items: center; justify-content: center; cursor: pointer;
+    position: relative;
+  }
+  .navBtn:hover { background: rgba(255,255,255,0.32); }
+  #accountDropdown {
+    display: none; position: absolute; top: 48px; right: 0; background: #fff; color: #2a2a2a;
+    border-radius: 10px; min-width: 220px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    overflow: hidden; text-align: left; z-index: 20;
+  }
+  #accountDropdown .ddRow { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #eee; }
+  #accountDropdown a, #accountDropdown button {
+    display: block; padding: 10px 14px; font-size: 13px; color: #e0562f; text-decoration: none;
+    background: none; border: none; width: 100%; text-align: left; cursor: pointer; margin: 0;
+  }
+  #accountDropdown a:hover, #accountDropdown button:hover { background: #fdf6ec; }
   header h1 { font-size: 26px; letter-spacing: 0.5px; }
   header p { margin-top: 6px; font-size: 14px; opacity: 0.95; }
   .searchWrap { max-width: 480px; margin: 18px auto 0; padding: 0 12px; }
@@ -76,12 +96,17 @@
 <body>
 
 <header>
-  <h1>🇹🇹 Discover Port of Spain</h1>
-  <p>Local restaurants, deals, and eats — right now</p>
+  <div class="navBtns">
+    <div class="navBtn" id="accountBtn">👤
+      <div id="accountDropdown"></div>
+    </div>
+    <div class="navBtn" id="addBtn">➕</div>
+  </div>
+  <h1>🇹🇹 TT Discover</h1>
+  <p>Local restaurants, deals, and eats in Port of Spain — right now</p>
   <div class="searchWrap">
     <input type="text" id="searchInput" placeholder="Search restaurants...">
   </div>
-  <p style="margin-top:14px;"><a href="/account.html" style="color:#fff;font-size:13px;text-decoration:underline;">📋 List your business</a></p>
 </header>
 
 <main>
@@ -106,6 +131,40 @@
 
 <script>
 let allBusinesses = [];
+
+// ---------------- Nav buttons ----------------
+document.getElementById('addBtn').addEventListener('click', () => {
+  window.location.href = '/account.html';
+});
+
+document.getElementById('accountBtn').addEventListener('click', async (e) => {
+  e.stopPropagation();
+  const dd = document.getElementById('accountDropdown');
+  if (dd.style.display === 'block'){ dd.style.display = 'none'; return; }
+
+  const token = localStorage.getItem('ttp_token');
+  if (!token){
+    dd.innerHTML = `<div class="ddRow">Not signed in</div><a href="/account.html">Sign In / Sign Up</a>`;
+  } else {
+    try {
+      const res = await fetch('/api/me', { headers: { 'x-auth-token': token } });
+      if (!res.ok) throw new Error('invalid session');
+      const data = await res.json();
+      dd.innerHTML = `<div class="ddRow">Signed in as<br><b>${data.email}</b></div>
+        <a href="/account.html">My Account</a>
+        <button id="ddLogout">Log Out</button>`;
+      document.getElementById('ddLogout').addEventListener('click', () => {
+        localStorage.removeItem('ttp_token');
+        dd.style.display = 'none';
+      });
+    } catch (err) {
+      localStorage.removeItem('ttp_token');
+      dd.innerHTML = `<div class="ddRow">Not signed in</div><a href="/account.html">Sign In / Sign Up</a>`;
+    }
+  }
+  dd.style.display = 'block';
+});
+window.addEventListener('click', () => { document.getElementById('accountDropdown').style.display = 'none'; });
 
 function activeDeals(biz){
   const now = new Date();

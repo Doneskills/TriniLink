@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Admin — TT Local Platform</title>
+<title>Admin — TT Discover</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: 'Segoe UI', system-ui, sans-serif; background: #1a1410; color: #f5ede1; padding: 20px; }
@@ -30,6 +30,12 @@
     width: auto; margin: 0; padding: 6px 12px; background: #7a2c2c; font-size: 12px;
   }
   hr { border: none; border-top: 1px solid #3a2e21; margin: 24px 0; }
+  .dropZone {
+    border: 2px dashed #4a3a28; border-radius: 10px; padding: 20px; text-align: center;
+    cursor: pointer; font-size: 13px; color: #cbbfae; transition: border-color 0.2s;
+  }
+  .dropZone.dragover { border-color: #f2a33c; color: #f2a33c; }
+  .dropZone img { max-width: 100%; max-height: 160px; border-radius: 8px; }
 </style>
 </head>
 <body>
@@ -54,8 +60,14 @@
     <input type="text" id="phone">
     <label>Hours (e.g. Mon-Sat 11am-9pm)</label>
     <input type="text" id="hours">
-    <label>Image URL (optional)</label>
-    <input type="text" id="imageUrl">
+    <label>Photo (optional)</label>
+    <div id="dropZone" class="dropZone">
+      <div id="dropZoneText">📷 Drag &amp; drop a photo here, or click to choose</div>
+      <img id="imagePreview" style="display:none;">
+    </div>
+    <input type="file" id="fileInput" accept="image/*" style="display:none;">
+    <div id="useUrlToggle" style="font-size:12px;color:#8a7a68;margin-top:6px;cursor:pointer;text-decoration:underline;">or paste an image link instead</div>
+    <input type="text" id="imageUrl" style="display:none;margin-top:6px;" placeholder="https://...">
 
     <hr>
     <label>Deal Title (optional)</label>
@@ -76,6 +88,58 @@
 
 <script>
 let adminPassword = '';
+
+// ---------------- Drag-and-drop image picker ----------------
+const dropZone = document.getElementById('dropZone');
+const fileInput = document.getElementById('fileInput');
+const imagePreview = document.getElementById('imagePreview');
+const dropZoneText = document.getElementById('dropZoneText');
+const imageUrlInput = document.getElementById('imageUrl');
+
+dropZone.addEventListener('click', () => fileInput.click());
+dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+dropZone.addEventListener('drop', (e) => {
+  e.preventDefault();
+  dropZone.classList.remove('dragover');
+  if (e.dataTransfer.files[0]) handleImageFile(e.dataTransfer.files[0]);
+});
+fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleImageFile(e.target.files[0]); });
+
+function handleImageFile(file){
+  if (!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 800;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim){
+        if (w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      imageUrlInput.value = dataUrl;
+      imagePreview.src = dataUrl;
+      imagePreview.style.display = 'block';
+      dropZoneText.style.display = 'none';
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+function resetImagePicker(){
+  imagePreview.style.display = 'none';
+  imagePreview.src = '';
+  dropZoneText.style.display = 'block';
+  imageUrlInput.style.display = 'none';
+}
+document.getElementById('useUrlToggle').addEventListener('click', () => {
+  imageUrlInput.style.display = imageUrlInput.style.display === 'none' ? 'block' : 'none';
+});
 
 document.getElementById('loginBtn').addEventListener('click', async () => {
   const pw = document.getElementById('passwordInput').value;
@@ -116,6 +180,7 @@ document.getElementById('addBtn').addEventListener('click', async () => {
     ['name','description','address','phone','hours','imageUrl','dealTitle','dealDescription','dealEndDate'].forEach(id => {
       document.getElementById(id).value = '';
     });
+    resetImagePicker();
     loadList();
   } else {
     document.getElementById('addMsg').textContent = 'Could not add business.';
