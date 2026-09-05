@@ -26,6 +26,10 @@
     position: relative;
   }
   .navBtn:hover { background: rgba(255,255,255,0.32); }
+  .navBtn.pill {
+    width: auto; padding: 0 16px; border-radius: 20px; font-size: 14px; font-weight: 700; gap: 6px;
+  }
+  .navBtn.avatarBtn.signedIn { background: #a8341f; border-color: #fff; font-weight: 700; font-size: 16px; }
   #accountDropdown {
     display: none; position: absolute; top: 48px; right: 0; background: #fff; color: #2a2a2a;
     border-radius: 10px; min-width: 220px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
@@ -97,8 +101,8 @@
 
 <header>
   <div class="navBtns">
-    <div class="navBtn" id="addBtn">📝</div>
-    <div class="navBtn" id="accountBtn">👤
+    <div class="navBtn pill" id="addBtn">+ Create</div>
+    <div class="navBtn avatarBtn" id="accountBtn"><span id="avatarLetter">👤</span>
       <div id="accountDropdown"></div>
     </div>
   </div>
@@ -137,30 +141,47 @@ document.getElementById('addBtn').addEventListener('click', () => {
   window.location.href = '/account.html';
 });
 
+async function checkSignInStatus(){
+  const token = localStorage.getItem('ttp_token');
+  const avatar = document.getElementById('avatarLetter');
+  const accountBtn = document.getElementById('accountBtn');
+  if (!token){
+    avatar.textContent = '👤';
+    accountBtn.classList.remove('signedIn');
+    return { signedIn: false };
+  }
+  try {
+    const res = await fetch('/api/me', { headers: { 'x-auth-token': token } });
+    if (!res.ok) throw new Error('invalid session');
+    const data = await res.json();
+    avatar.textContent = data.email[0].toUpperCase();
+    accountBtn.classList.add('signedIn');
+    return { signedIn: true, email: data.email };
+  } catch (err) {
+    localStorage.removeItem('ttp_token');
+    avatar.textContent = '👤';
+    accountBtn.classList.remove('signedIn');
+    return { signedIn: false };
+  }
+}
+
 document.getElementById('accountBtn').addEventListener('click', async (e) => {
   e.stopPropagation();
   const dd = document.getElementById('accountDropdown');
   if (dd.style.display === 'block'){ dd.style.display = 'none'; return; }
 
-  const token = localStorage.getItem('ttp_token');
-  if (!token){
+  const status = await checkSignInStatus();
+  if (!status.signedIn){
     dd.innerHTML = `<div class="ddRow">Not signed in</div><a href="/account.html">Sign In / Sign Up</a>`;
   } else {
-    try {
-      const res = await fetch('/api/me', { headers: { 'x-auth-token': token } });
-      if (!res.ok) throw new Error('invalid session');
-      const data = await res.json();
-      dd.innerHTML = `<div class="ddRow">Signed in as<br><b>${data.email}</b></div>
-        <a href="/account.html">My Account</a>
-        <button id="ddLogout">Log Out</button>`;
-      document.getElementById('ddLogout').addEventListener('click', () => {
-        localStorage.removeItem('ttp_token');
-        dd.style.display = 'none';
-      });
-    } catch (err) {
+    dd.innerHTML = `<div class="ddRow">Signed in as<br><b>${status.email}</b></div>
+      <a href="/account.html">My Account</a>
+      <button id="ddLogout">Log Out</button>`;
+    document.getElementById('ddLogout').addEventListener('click', () => {
       localStorage.removeItem('ttp_token');
-      dd.innerHTML = `<div class="ddRow">Not signed in</div><a href="/account.html">Sign In / Sign Up</a>`;
-    }
+      checkSignInStatus();
+      dd.style.display = 'none';
+    });
   }
   dd.style.display = 'block';
 });
@@ -243,6 +264,7 @@ document.getElementById('searchInput').addEventListener('input', (e) => {
 });
 
 loadBusinesses();
+checkSignInStatus();
 </script>
 </body>
 </html>
