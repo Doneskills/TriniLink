@@ -196,12 +196,18 @@ async function loadList(){
     const row = document.createElement('div');
     row.className = 'bizRow';
     row.innerHTML = `<span>${biz.name}</span>`;
+    const viewLink = document.createElement('a');
+    viewLink.href = '/biz/' + biz._id;
+    viewLink.target = '_blank';
+    viewLink.textContent = '🔗 View';
+    viewLink.style.cssText = 'font-size:12px;color:#f2a33c;text-decoration:none;margin-right:10px;';
     const delBtn = document.createElement('button');
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', async () => {
       await fetch('/api/admin/businesses/' + biz._id, { method: 'DELETE', headers: { 'x-admin-password': adminPassword } });
       loadList();
     });
+    row.appendChild(viewLink);
     row.appendChild(delBtn);
     box.appendChild(row);
   });

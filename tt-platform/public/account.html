@@ -278,6 +278,11 @@ async function loadMyListings(){
     const row = document.createElement('div');
     row.className = 'listingRow';
     row.innerHTML = `<span>${biz.name}</span>`;
+    const viewLink = document.createElement('a');
+    viewLink.href = '/biz/' + biz._id;
+    viewLink.target = '_blank';
+    viewLink.textContent = '🔗 View Page';
+    viewLink.style.cssText = 'font-size:12px;color:#e0562f;text-decoration:none;margin-right:10px;';
     const delBtn = document.createElement('button');
     delBtn.className = 'danger';
     delBtn.textContent = 'Delete';
@@ -285,6 +290,7 @@ async function loadMyListings(){
       await fetch('/api/my/businesses/' + biz._id, { method: 'DELETE', headers: { 'x-auth-token': token } });
       loadMyListings();
     });
+    row.appendChild(viewLink);
     row.appendChild(delBtn);
     box.appendChild(row);
   });

@@ -80,6 +80,81 @@ app.get('/api/businesses/:id', async (req, res) => {
   }
 });
 
+function escapeHtml(s){
+  return String(s || '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+}
+
+app.get('/biz/:id', async (req, res) => {
+  if (!businessesCol) return res.status(404).send('Not found');
+  let biz;
+  try {
+    biz = await businessesCol.findOne({ _id: new ObjectId(req.params.id) });
+  } catch (err) {
+    biz = null;
+  }
+  if (!biz) return res.status(404).send('<h1>Listing not found</h1><a href="/">Back to TT Discover</a>');
+
+  const now = new Date();
+  const activeDeals = (biz.deals || []).filter(d => !d.endDate || new Date(d.endDate) >= now);
+
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${escapeHtml(biz.name)} — TT Discover</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fdf6ec; color: #2a2a2a; }
+  .topBar {
+    background: linear-gradient(135deg, #e0562f, #f2a33c); color: #fff;
+    padding: 12px 20px; font-size: 13px;
+  }
+  .topBar a { color: #fff; text-decoration: none; opacity: 0.9; }
+  .hero {
+    width: 100%; height: 220px; background-color: #f0d9c0; background-size: cover; background-position: center;
+    display: flex; align-items: center; justify-content: center; font-size: 48px;
+  }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 24px 18px 60px; }
+  h1 { font-size: 24px; margin-bottom: 4px; }
+  .meta { color: #888; font-size: 13px; margin-bottom: 16px; }
+  .desc { font-size: 15px; line-height: 1.6; margin-bottom: 20px; }
+  .infoRow { font-size: 14px; margin-bottom: 8px; }
+  .infoRow b { color: #555; }
+  .infoRow a { color: #e0562f; text-decoration: none; font-weight: 600; }
+  .dealBox {
+    background: #fff3e8; border: 1px solid #f2a33c; border-radius: 10px;
+    padding: 14px 16px; margin-top: 18px;
+  }
+  .dealBox .title { font-weight: 700; color: #e0562f; margin-bottom: 4px; }
+  footer {
+    text-align: center; padding: 24px 16px; color: #aaa; font-size: 12px;
+    border-top: 1px solid #eee; margin-top: 30px;
+  }
+  footer a { color: #e0562f; text-decoration: none; font-weight: 600; }
+</style>
+</head>
+<body>
+  <div class="topBar"><a href="/">← Back to TT Discover</a></div>
+  <div class="hero" ${biz.imageUrl ? `style="background-image:url('${biz.imageUrl}')"` : ''}>${biz.imageUrl ? '' : '🍽️'}</div>
+  <div class="wrap">
+    <h1>${escapeHtml(biz.name)}</h1>
+    <div class="meta">${escapeHtml(biz.category || 'Food')} · ${escapeHtml(biz.area || 'Port of Spain')}</div>
+    <div class="desc">${escapeHtml(biz.description)}</div>
+    ${biz.address ? `<div class="infoRow"><b>📍 Address:</b> ${escapeHtml(biz.address)}</div>` : ''}
+    ${biz.phone ? `<div class="infoRow"><b>📞 Phone:</b> <a href="tel:${escapeHtml(biz.phone)}">${escapeHtml(biz.phone)}</a></div>` : ''}
+    ${biz.hours ? `<div class="infoRow"><b>🕒 Hours:</b> ${escapeHtml(biz.hours)}</div>` : ''}
+    ${activeDeals.map(d => `<div class="dealBox"><div class="title">🔥 ${escapeHtml(d.title)}</div>${escapeHtml(d.description)}</div>`).join('')}
+  </div>
+  <footer>
+    Powered by <a href="/">TT Discover</a> — <a href="/account.html">List your business free</a>
+  </footer>
+</body>
+</html>`);
+});
+
 // ---------------- Accounts (for business owners) ----------------
 app.post('/api/signup', async (req, res) => {
   if (!usersCol) return res.status(503).json({ error: 'Database not connected' });
