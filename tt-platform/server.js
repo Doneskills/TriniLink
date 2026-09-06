@@ -271,6 +271,41 @@ async function paypalAccessToken(){
   return data.access_token;
 }
 
+// Handles PayPal's webhook notifications (cancellations, expirations, failed renewals, etc.)
+// Note: this does not yet verify PayPal's webhook signature — fine for sandbox testing,
+// but worth hardening before handling real live payments at scale.
+app.post('/api/paypal/webhook', async (req, res) => {
+  res.sendStatus(200); // acknowledge quickly, PayPal expects a fast response
+  try {
+    const eventType = req.body && req.body.event_type;
+    const subscriptionId = req.body && req.body.resource && req.body.resource.id;
+    if (!eventType || !subscriptionId || !usersCol) return;
+
+    const downgradeEvents = [
+      'BILLING.SUBSCRIPTION.CANCELLED',
+      'BILLING.SUBSCRIPTION.EXPIRED',
+      'BILLING.SUBSCRIPTION.SUSPENDED'
+    ];
+    const upgradeEvents = [
+      'BILLING.SUBSCRIPTION.ACTIVATED',
+      'BILLING.SUBSCRIPTION.RE-ACTIVATED'
+    ];
+
+    if (downgradeEvents.includes(eventType)){
+      await usersCol.updateOne({ paypalSubscriptionId: subscriptionId }, { $set: { plan: 'free' } });
+      console.log('PayPal webhook: downgraded subscription', subscriptionId, eventType);
+    } else if (upgradeEvents.includes(eventType)){
+      await usersCol.updateOne(
+        { paypalSubscriptionId: subscriptionId },
+        { $set: { plan: 'premium', premiumMethod: 'paypal', premiumExpiresAt: null } }
+      );
+      console.log('PayPal webhook: activated subscription', subscriptionId, eventType);
+    }
+  } catch (err) {
+    console.error('PayPal webhook handling failed:', err.message);
+  }
+});
+
 app.post('/api/premium/paypal/confirm', requireUser, async (req, res) => {
   try {
     const subscriptionId = req.body && req.body.subscriptionId;
