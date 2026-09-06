@@ -128,7 +128,16 @@
       <h2>Settings</h2>
       <p>Signed in as <b id="meEmail"></b></p>
       <p style="margin-top:10px;">Current plan: <span class="planBadge" id="planBadge">Free</span></p>
-      <p class="premiumNote">Premium (coming soon) will unlock featured placement, more photos per listing, and posting more frequent deals.</p>
+      <div id="premiumFreeView">
+        <p class="premiumNote">Premium unlocks featured placement, more photos per listing, and posting more frequent deals.</p>
+        <button class="secondary" id="wipayBtn">Pay 3 months via WiPay — TT$75</button>
+        <div id="paypal-button-container" style="margin-top:10px;"></div>
+        <p class="premiumNote" style="margin-top:8px;">WiPay unlocks Premium for 90 days (renew manually). PayPal auto-renews monthly.</p>
+      </div>
+      <div id="premiumActiveView" style="display:none;">
+        <p class="premiumNote" id="premiumStatusText"></p>
+      </div>
+      <div class="msg" id="premiumMsg"></div>
       <button class="secondary" id="logoutBtn">Log Out</button>
     </div>
   </div>
@@ -304,6 +313,78 @@ async function enterApp(){
   document.getElementById('planBadge').textContent = data.plan === 'premium' ? 'Premium' : 'Free';
   showView('main');
   loadMyListings();
+  renderPremiumSection(data);
+
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('premium') === 'success'){
+    document.getElementById('premiumMsg').textContent = 'Payment received — Premium is active!';
+    window.history.replaceState({}, '', '/account.html');
+    enterApp();
+  } else if (params.get('premium') === 'failed'){
+    document.getElementById('premiumMsg').textContent = 'Payment did not complete. Please try again.';
+    window.history.replaceState({}, '', '/account.html');
+  }
+}
+
+function renderPremiumSection(data){
+  const freeView = document.getElementById('premiumFreeView');
+  const activeView = document.getElementById('premiumActiveView');
+  if (data.plan === 'premium'){
+    freeView.style.display = 'none';
+    activeView.style.display = 'block';
+    if (data.premiumMethod === 'paypal'){
+      document.getElementById('premiumStatusText').textContent = 'Premium is active and will auto-renew monthly via PayPal.';
+    } else {
+      const expires = data.premiumExpiresAt ? new Date(data.premiumExpiresAt).toLocaleDateString() : 'soon';
+      document.getElementById('premiumStatusText').textContent = `Premium is active until ${expires} (paid via WiPay — renew manually before it lapses).`;
+    }
+  } else {
+    freeView.style.display = 'block';
+    activeView.style.display = 'none';
+    setupPaypalButton();
+  }
+}
+
+document.getElementById('wipayBtn').addEventListener('click', async () => {
+  const res = await fetch('/api/premium/wipay/start', { method: 'POST', headers: { 'x-auth-token': token } });
+  const data = await res.json();
+  if (data.checkoutUrl) window.location.href = data.checkoutUrl;
+  else document.getElementById('premiumMsg').textContent = data.error || 'Could not start WiPay checkout.';
+});
+
+let paypalLoaded = false;
+async function setupPaypalButton(){
+  if (paypalLoaded) return;
+  const configRes = await fetch('/api/paypal/config');
+  const config = await configRes.json();
+  if (!config.clientId || !config.planId){
+    document.getElementById('paypal-button-container').innerHTML =
+      '<p style="font-size:12px;color:#999;">PayPal isn\'t configured yet.</p>';
+    return;
+  }
+  paypalLoaded = true;
+  const script = document.createElement('script');
+  script.src = `https://www.paypal.com/sdk/js?client-id=${config.clientId}&vault=true&intent=subscription`;
+  script.onload = () => {
+    paypal.Buttons({
+      style: { label: 'subscribe' },
+      createSubscription: (data, actions) => actions.subscription.create({ plan_id: config.planId }),
+      onApprove: async (data) => {
+        const res = await fetch('/api/premium/paypal/confirm', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+          body: JSON.stringify({ subscriptionId: data.subscriptionID })
+        });
+        if (res.ok){
+          document.getElementById('premiumMsg').textContent = 'Subscribed! Premium is now active.';
+          enterApp();
+        } else {
+          document.getElementById('premiumMsg').textContent = 'Could not confirm subscription.';
+        }
+      }
+    }).render('#paypal-button-container');
+  };
+  document.body.appendChild(script);
 }
 
 if (token) enterApp(); else showView('auth');

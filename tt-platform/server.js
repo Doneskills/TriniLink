@@ -194,8 +194,102 @@ app.post('/api/login', async (req, res) => {
   }
 });
 
-app.get('/api/me', requireUser, (req, res) => {
-  res.json({ email: req.user.email, plan: req.user.plan || 'free' });
+app.get('/api/me', requireUser, async (req, res) => {
+  let user = req.user;
+  if (user.plan === 'premium' && user.premiumMethod === 'wipay' && user.premiumExpiresAt && new Date(user.premiumExpiresAt) < new Date()){
+    await usersCol.updateOne({ _id: user._id }, { $set: { plan: 'free' } });
+    user.plan = 'free';
+  }
+  res.json({
+    email: user.email,
+    plan: user.plan || 'free',
+    premiumMethod: user.premiumMethod || null,
+    premiumExpiresAt: user.premiumExpiresAt || null
+  });
+});
+
+// ---------------- Premium payments (WiPay one-time + PayPal recurring) ----------------
+const PREMIUM_WIPAY_PRICE_TTD = 75; // covers 3 months — adjust as needed
+const PREMIUM_WIPAY_DAYS = 90;
+
+app.post('/api/premium/wipay/start', requireUser, async (req, res) => {
+  try {
+    const orderId = 'PREM-' + req.user._id.toString() + '-' + Date.now();
+    const baseUrl = `${req.protocol}://${req.get('host')}`;
+    // Best-effort based on WiPay's documented hosted-checkout flow — exact field names
+    // may need a small adjustment once tested against real WiPay sandbox credentials.
+    const params = new URLSearchParams({
+      account_number: process.env.WIPAY_ACCOUNT_NUMBER || '',
+      api_key: process.env.WIPAY_API_KEY || '',
+      total: PREMIUM_WIPAY_PRICE_TTD.toFixed(2),
+      order_id: orderId,
+      currency: 'TTD',
+      country_code: 'TT',
+      method: 'credit_card',
+      response_url: `${baseUrl}/api/premium/wipay/return`
+    });
+    res.json({ checkoutUrl: `https://tt.wipayfinancial.com/plugins/payments/request?${params.toString()}` });
+  } catch (err) {
+    console.error('WiPay start failed:', err.message);
+    res.status(500).json({ error: 'Could not start WiPay checkout.' });
+  }
+});
+
+app.get('/api/premium/wipay/return', async (req, res) => {
+  const { order_id, status } = req.query;
+  if (status === 'success' && order_id && usersCol){
+    const userId = String(order_id).split('-')[1];
+    try {
+      const expires = new Date(Date.now() + PREMIUM_WIPAY_DAYS * 24 * 60 * 60 * 1000);
+      await usersCol.updateOne(
+        { _id: new ObjectId(userId) },
+        { $set: { plan: 'premium', premiumMethod: 'wipay', premiumExpiresAt: expires } }
+      );
+    } catch (err) {
+      console.error('WiPay confirm failed:', err.message);
+    }
+  }
+  res.redirect('/account.html?premium=' + (status === 'success' ? 'success' : 'failed'));
+});
+
+app.get('/api/paypal/config', (req, res) => {
+  res.json({ clientId: process.env.PAYPAL_CLIENT_ID || '', planId: process.env.PAYPAL_PLAN_ID || '' });
+});
+
+const PAYPAL_BASE = process.env.PAYPAL_ENV === 'sandbox'
+  ? 'https://api-m.sandbox.paypal.com'
+  : 'https://api-m.paypal.com';
+
+async function paypalAccessToken(){
+  const auth = Buffer.from(process.env.PAYPAL_CLIENT_ID + ':' + process.env.PAYPAL_CLIENT_SECRET).toString('base64');
+  const resp = await fetch(`${PAYPAL_BASE}/v1/oauth2/token`, {
+    method: 'POST',
+    headers: { 'Authorization': 'Basic ' + auth, 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: 'grant_type=client_credentials'
+  });
+  const data = await resp.json();
+  return data.access_token;
+}
+
+app.post('/api/premium/paypal/confirm', requireUser, async (req, res) => {
+  try {
+    const subscriptionId = req.body && req.body.subscriptionId;
+    if (!subscriptionId) return res.status(400).json({ error: 'Missing subscription ID.' });
+    const token = await paypalAccessToken();
+    const resp = await fetch(`${PAYPAL_BASE}/v1/billing/subscriptions/${subscriptionId}`, {
+      headers: { 'Authorization': 'Bearer ' + token }
+    });
+    const sub = await resp.json();
+    if (sub.status !== 'ACTIVE') return res.status(400).json({ error: 'Subscription is not active yet.' });
+    await usersCol.updateOne(
+      { _id: req.user._id },
+      { $set: { plan: 'premium', premiumMethod: 'paypal', paypalSubscriptionId: subscriptionId, premiumExpiresAt: null } }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('PayPal confirm failed:', err.message);
+    res.status(500).json({ error: 'Could not confirm subscription.' });
+  }
 });
 
 // ---------------- Self-service business listings (signed-in owners) ----------------
