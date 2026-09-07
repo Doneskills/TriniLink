@@ -130,9 +130,18 @@
       <p style="margin-top:10px;">Current plan: <span class="planBadge" id="planBadge">Free</span></p>
       <div id="premiumFreeView">
         <p class="premiumNote">Premium unlocks featured placement, more photos per listing, and posting more frequent deals.</p>
-        <button class="secondary" id="wipayBtn">Pay 3 months via WiPay — TT$75</button>
-        <div id="paypal-button-container" style="margin-top:10px;"></div>
-        <p class="premiumNote" style="margin-top:8px;">WiPay unlocks Premium for 90 days (renew manually). PayPal auto-renews monthly.</p>
+        <div class="tabRow" style="margin-top:10px;">
+          <button id="tabPaypalPay" class="active">PayPal (monthly)</button>
+          <button id="tabWipayPay">WiPay (3 months)</button>
+        </div>
+        <div id="paypalPayPane">
+          <div id="paypal-button-container"></div>
+          <p class="premiumNote" style="margin-top:8px;">Auto-renews monthly — nothing to repay manually.</p>
+        </div>
+        <div id="wipayPayPane" style="display:none;">
+          <button class="secondary" id="wipayBtn">Pay 3 months via WiPay — TT$75</button>
+          <p class="premiumNote" style="margin-top:8px;">One-time payment covering 90 days. You'll need to repay manually when it lapses.</p>
+        </div>
       </div>
       <div id="premiumActiveView" style="display:none;">
         <p class="premiumNote" id="premiumStatusText"></p>
@@ -345,6 +354,19 @@ function renderPremiumSection(data){
   }
 }
 
+document.getElementById('tabPaypalPay').addEventListener('click', () => {
+  document.getElementById('tabPaypalPay').classList.add('active');
+  document.getElementById('tabWipayPay').classList.remove('active');
+  document.getElementById('paypalPayPane').style.display = 'block';
+  document.getElementById('wipayPayPane').style.display = 'none';
+});
+document.getElementById('tabWipayPay').addEventListener('click', () => {
+  document.getElementById('tabWipayPay').classList.add('active');
+  document.getElementById('tabPaypalPay').classList.remove('active');
+  document.getElementById('wipayPayPane').style.display = 'block';
+  document.getElementById('paypalPayPane').style.display = 'none';
+});
+
 document.getElementById('wipayBtn').addEventListener('click', async () => {
   const res = await fetch('/api/premium/wipay/start', { method: 'POST', headers: { 'x-auth-token': token } });
   const data = await res.json();
@@ -365,6 +387,10 @@ async function setupPaypalButton(){
   paypalLoaded = true;
   const script = document.createElement('script');
   script.src = `https://www.paypal.com/sdk/js?client-id=${config.clientId}&vault=true&intent=subscription`;
+  script.onerror = () => {
+    document.getElementById('paypal-button-container').innerHTML =
+      '<p style="font-size:12px;color:#e0562f;">PayPal button failed to load. Check your internet connection and refresh.</p>';
+  };
   script.onload = () => {
     paypal.Buttons({
       style: { label: 'subscribe' },

@@ -227,7 +227,7 @@ app.post('/api/premium/wipay/start', requireUser, async (req, res) => {
       country_code: 'TT',
       method: 'credit_card',
       response_url: `${baseUrl}/api/premium/wipay/return`,
-      origin: baseUrl
+      origin: req.get('host').replace(/[^a-zA-Z0-9_-]/g, '-')
     });
     res.json({ checkoutUrl: `https://tt.wipayfinancial.com/plugins/payments/request?${params.toString()}` });
   } catch (err) {
