@@ -73,6 +73,10 @@
     display: inline-block; margin-top: 6px; background: #e0562f; color: #fff;
     font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600;
   }
+  .featuredBadge {
+    display: inline-block; margin-bottom: 4px; background: #f2a33c; color: #fff;
+    font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 700; letter-spacing: 0.3px;
+  }
   .emptyState { color: #999; font-size: 14px; padding: 20px 0; }
 
   #detailModal {
@@ -114,6 +118,10 @@
 </header>
 
 <main>
+  <section id="featuredSection" style="display:none;">
+    <div class="sectionTitle">⭐ Featured</div>
+    <div class="cardGrid" id="featuredGrid"></div>
+  </section>
   <section>
     <div class="sectionTitle">🔥 Deals happening now</div>
     <div class="cardGrid" id="dealsGrid"><div class="emptyState">Loading...</div></div>
@@ -198,11 +206,21 @@ function cardHtml(biz){
   return `<div class="card" onclick="openDetail('${biz._id}')">
     <div class="cardImg" ${imgStyle}>${biz.imageUrl ? '' : '🍽️'}</div>
     <div class="cardBody">
+      ${biz.isFeatured ? '<div class="featuredBadge">⭐ Featured</div>' : ''}
       <div class="cardName">${escapeHtml(biz.name)}</div>
       <div class="cardMeta">${escapeHtml(biz.hours || '')}</div>
       ${deals.length ? `<div class="dealBadge">${escapeHtml(deals[0].title)}</div>` : ''}
     </div>
   </div>`;
+}
+
+function shuffle(arr){
+  const a = arr.slice();
+  for (let i = a.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 function escapeHtml(s){
@@ -219,8 +237,18 @@ async function loadBusinesses(query){
 }
 
 function render(){
+  const featuredSection = document.getElementById('featuredSection');
+  const featuredGrid = document.getElementById('featuredGrid');
   const dealsGrid = document.getElementById('dealsGrid');
   const allGrid = document.getElementById('allGrid');
+
+  const featured = shuffle(allBusinesses.filter(b => b.isFeatured));
+  if (featured.length){
+    featuredSection.style.display = 'block';
+    featuredGrid.innerHTML = featured.map(cardHtml).join('');
+  } else {
+    featuredSection.style.display = 'none';
+  }
 
   const withDeals = allBusinesses.filter(b => activeDeals(b).length > 0);
   dealsGrid.innerHTML = withDeals.length

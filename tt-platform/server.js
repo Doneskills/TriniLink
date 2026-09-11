@@ -55,13 +55,54 @@ app.get('/api/businesses', async (req, res) => {
   if (!businessesCol) return res.json([]);
   try {
     const q = (req.query.q || '').trim();
-    const filter = q
-      ? { $or: [
+    const matchStage = q
+      ? { $match: { $or: [
           { name: { $regex: q, $options: 'i' } },
           { description: { $regex: q, $options: 'i' } }
-        ] }
-      : {};
-    const list = await businessesCol.find(filter).sort({ name: 1 }).toArray();
+        ] } }
+      : { $match: {} };
+
+    const list = await businessesCol.aggregate([
+      matchStage,
+      {
+        $lookup: {
+          from: 'users',
+          let: { ownerIdStr: '$ownerId' },
+          pipeline: [
+            { $match: { $expr: { $eq: [{ $toString: '$_id' }, '$$ownerIdStr'] } } },
+            { $project: { plan: 1, premiumMethod: 1, premiumExpiresAt: 1 } }
+          ],
+          as: 'ownerInfo'
+        }
+      },
+      {
+        $addFields: {
+          ownerIsPremium: {
+            $let: {
+              vars: { owner: { $arrayElemAt: ['$ownerInfo', 0] } },
+              in: {
+                $and: [
+                  { $eq: ['$$owner.plan', 'premium'] },
+                  { $or: [
+                      { $ne: ['$$owner.premiumMethod', 'wipay'] },
+                      { $eq: ['$$owner.premiumExpiresAt', null] },
+                      { $gt: ['$$owner.premiumExpiresAt', '$$NOW'] }
+                  ] }
+                ]
+              }
+            }
+          }
+        }
+      },
+      {
+        $addFields: {
+          isFeatured: { $or: [ { $eq: ['$featured', true] }, '$ownerIsPremium' ] }
+        }
+      },
+      { $sort: { isFeatured: -1, name: 1 } },
+      { $project: { ownerInfo: 0, ownerIsPremium: 0 } }
+    ]).toArray();
+
     res.json(list);
   } catch (err) {
     console.error('Fetch businesses failed:', err.message);
@@ -452,6 +493,19 @@ app.delete('/api/admin/businesses/:id', requireAdmin, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Could not delete business' });
+  }
+});
+
+app.patch('/api/admin/businesses/:id/featured', requireAdmin, async (req, res) => {
+  if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
+  try {
+    await businessesCol.updateOne(
+      { _id: new ObjectId(req.params.id) },
+      { $set: { featured: !!(req.body && req.body.featured) } }
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not update business' });
   }
 });
 
