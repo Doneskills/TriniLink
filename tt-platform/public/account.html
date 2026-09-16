@@ -75,6 +75,21 @@
     display: flex; align-items: center; gap: 4px; font-size: 11px; color: #999;
     text-transform: none; margin: 0; white-space: nowrap; flex-shrink: 0;
   }
+  .menuUploadBtn {
+    display: inline-block; padding: 9px 14px; background: #f0e4d0; color: #2a2a2a;
+    border-radius: 6px; font-size: 13px; cursor: pointer; text-align: center;
+  }
+  .menuUploadBtn:hover { background: #e8dcc8; }
+  #menuPreviewGrid { display: flex; flex-wrap: wrap; margin-top: 4px; }
+  .menuPhotoPreview { position: relative; margin: 4px 4px 0 0; }
+  .menuPhotoPreview img {
+    width: 70px; height: 70px; object-fit: cover; border-radius: 8px; display: block;
+  }
+  .menuPhotoPreview .removeBtn {
+    position: absolute; top: -6px; right: -6px; width: 18px; height: 18px; border-radius: 50%;
+    background: #c94a3a; color: #fff; font-size: 11px; line-height: 18px; text-align: center;
+    cursor: pointer;
+  }
 </style>
 </head>
 <body>
@@ -132,6 +147,10 @@
       <input type="file" id="fileInput" accept="image/*" style="display:none;">
       <div id="useUrlToggle" style="font-size:12px;color:#999;margin-top:6px;cursor:pointer;text-decoration:underline;">or paste an image link instead</div>
       <input type="text" id="bImageUrl" style="display:none;margin-top:6px;" placeholder="https://...">
+      <label>Menu Photos (optional)</label>
+      <div id="menuUploadBtn" class="menuUploadBtn">📋 Click to add menu photo(s)</div>
+      <input type="file" id="menuFileInput" accept="image/*" multiple style="display:none;">
+      <div id="menuPreviewGrid"></div>
       <hr>
       <label>Deal Title (optional)</label>
       <input type="text" id="bDealTitle">
@@ -310,6 +329,59 @@ function resetHoursPicker(){
 buildHoursEditor();
 updateHoursSummary();
 
+// ---------------- Menu photos (multiple, click-to-upload) ----------------
+let menuPhotosState = [];
+const menuFileInput = document.getElementById('menuFileInput');
+document.getElementById('menuUploadBtn').addEventListener('click', () => menuFileInput.click());
+menuFileInput.addEventListener('change', (e) => {
+  Array.from(e.target.files).forEach(file => handleMenuFile(file));
+  menuFileInput.value = '';
+});
+
+function handleMenuFile(file){
+  if (!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+  if (menuPhotosState.length >= 10){ alert('You can add up to 10 menu photos.'); return; }
+  const reader = new FileReader();
+  reader.onload = (evt) => {
+    const img = new Image();
+    img.onload = () => {
+      const maxDim = 800;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim){
+        if (w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else { w = Math.round(w * maxDim / h); h = maxDim; }
+      }
+      const canvas = document.createElement('canvas');
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+      menuPhotosState.push(canvas.toDataURL('image/jpeg', 0.75));
+      renderMenuPreviews();
+    };
+    img.src = evt.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function renderMenuPreviews(){
+  const grid = document.getElementById('menuPreviewGrid');
+  grid.innerHTML = '';
+  menuPhotosState.forEach((url, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'menuPhotoPreview';
+    wrap.innerHTML = `<img src="${url}"><div class="removeBtn">✕</div>`;
+    wrap.querySelector('.removeBtn').addEventListener('click', () => {
+      menuPhotosState.splice(i, 1);
+      renderMenuPreviews();
+    });
+    grid.appendChild(wrap);
+  });
+}
+
+function resetMenuPhotos(){
+  menuPhotosState = [];
+  renderMenuPreviews();
+}
+
 function showView(view){
   document.getElementById('authView').style.display = view === 'auth' ? 'block' : 'none';
   document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
@@ -366,6 +438,7 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     phone: document.getElementById('bPhone').value,
     hours: hoursState,
     imageUrl: document.getElementById('bImageUrl').value,
+    menuPhotos: menuPhotosState,
     dealTitle: document.getElementById('bDealTitle').value,
     dealDescription: document.getElementById('bDealDescription').value,
     dealEndDate: document.getElementById('bDealEndDate').value
@@ -383,6 +456,7 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     });
     resetImagePicker();
     resetHoursPicker();
+    resetMenuPhotos();
     loadMyListings();
   } else {
     document.getElementById('addMsg').textContent = data.error || 'Could not add business.';

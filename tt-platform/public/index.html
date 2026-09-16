@@ -102,6 +102,17 @@
   #detailContent .desc { font-size: 14px; line-height: 1.5; margin-bottom: 14px; }
   #detailContent .row { font-size: 13px; margin-bottom: 6px; }
   #detailContent .row b { color: #555; }
+  .detailTabRow {
+    display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #eee;
+    position: sticky; top: 0; background: #fdf6ec; z-index: 1;
+  }
+  .detailTabBtn {
+    flex: 1; padding: 10px 4px; background: none; border: none; font-size: 13px;
+    font-weight: 700; color: #999; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .detailTabBtn.active { color: #e0562f; border-bottom-color: #e0562f; }
+  .menuPhotoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
+  .menuPhotoGrid img { width: 100%; border-radius: 8px; display: block; }
   footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; }
 </style>
 </head>
@@ -297,21 +308,58 @@ function render(){
 function openDetail(id){
   const biz = allBusinesses.find(b => b._id === id);
   if (!biz) return;
-  const deals = activeDeals(biz);
   document.getElementById('detailImg').style.backgroundImage = biz.imageUrl ? `url('${biz.imageUrl}')` : '';
   document.getElementById('detailImg').textContent = biz.imageUrl ? '' : '🍽️';
-  document.getElementById('detailContent').innerHTML = `
-    <h2>${escapeHtml(biz.name)}</h2>
-    <div class="meta">${escapeHtml(biz.category)} · ${escapeHtml(biz.area)}</div>
-    <div class="desc">${escapeHtml(biz.description)}</div>
-    ${biz.address ? `<div class="row"><b>Address:</b> ${escapeHtml(biz.address)}</div>` : ''}
-    ${biz.phone ? `<div class="row"><b>Phone:</b> ${escapeHtml(biz.phone)}</div>` : ''}
-    ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
-    ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
-  `;
+  renderDetailTabs(biz, 'overview');
   document.getElementById('detailModal').classList.add('open');
   document.getElementById('detailModal').scrollTop = 0;
   document.body.style.overflow = 'hidden';
+}
+
+function renderDetailTabs(biz, activeTab){
+  const deals = activeDeals(biz);
+  const tabs = ['Overview', 'Menu', 'Review', 'About'];
+  const tabsHtml = tabs.map(t => {
+    const key = t.toLowerCase();
+    return `<button class="detailTabBtn ${key === activeTab ? 'active' : ''}" data-tab="${key}">${t}</button>`;
+  }).join('');
+
+  let panelHtml = '';
+  if (activeTab === 'overview'){
+    panelHtml = `
+      <h2>${escapeHtml(biz.name)}</h2>
+      <div class="meta">${escapeHtml(biz.category)} · ${escapeHtml(biz.area)}</div>
+      <div class="desc">${escapeHtml(biz.description)}</div>
+      ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
+      <div class="row"><b>Rating:</b> ⭐ No ratings yet</div>
+      ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
+    `;
+  } else if (activeTab === 'menu'){
+    const photos = biz.menuPhotos || [];
+    panelHtml = photos.length
+      ? `<div class="menuPhotoGrid">${photos.map(u => `<img src="${u}">`).join('')}</div>`
+      : `<div class="emptyState">This business hasn't added their menu yet.</div>`;
+  } else if (activeTab === 'review'){
+    panelHtml = `<div class="emptyState">No reviews yet — reviews are coming soon!</div>`;
+  } else if (activeTab === 'about'){
+    panelHtml = `
+      <h2>${escapeHtml(biz.name)}</h2>
+      <div class="desc">${escapeHtml(biz.description)}</div>
+      ${biz.address ? `<div class="row"><b>Address:</b> ${escapeHtml(biz.address)}</div>` : ''}
+      ${biz.phone ? `<div class="row"><b>Phone:</b> ${escapeHtml(biz.phone)}</div>` : ''}
+      ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
+      <div class="row"><b>Category:</b> ${escapeHtml(biz.category)}</div>
+      <div class="row"><b>Area:</b> ${escapeHtml(biz.area)}</div>
+    `;
+  }
+
+  document.getElementById('detailContent').innerHTML = `
+    <div class="detailTabRow">${tabsHtml}</div>
+    <div id="detailTabPanel">${panelHtml}</div>
+  `;
+  document.querySelectorAll('.detailTabBtn').forEach(btn => {
+    btn.addEventListener('click', () => renderDetailTabs(biz, btn.dataset.tab));
+  });
 }
 function closeDetail(){
   document.getElementById('detailModal').classList.remove('open');
