@@ -53,6 +53,28 @@
     border-radius: 20px; font-size: 12px; font-weight: 700;
   }
   .premiumNote { color: #999; font-size: 13px; margin-top: 10px; line-height: 1.5; }
+  .hoursSummary {
+    padding: 9px 10px; background: #fdf6ec; border: 1px solid #e8dcc8;
+    border-radius: 6px; font-size: 14px; cursor: pointer; color: #2a2a2a;
+  }
+  .hoursSummary:after { content: ' ✎'; color: #e0562f; }
+  .hoursEditor {
+    margin-top: 8px; border: 1px solid #e8dcc8; border-radius: 8px; padding: 8px 10px;
+  }
+  .hoursDayRow {
+    display: flex; align-items: center; gap: 6px; padding: 6px 0;
+    border-bottom: 1px solid #f0e4d0; font-size: 13px;
+  }
+  .hoursDayRow:last-child { border-bottom: none; }
+  .hoursDayRow .dayLabel { width: 34px; font-weight: 700; color: #555; flex-shrink: 0; }
+  .hoursDayRow input[type="time"] {
+    flex: 1; padding: 5px 4px; font-size: 12px; min-width: 0;
+  }
+  .hoursDayRow .toLabel { color: #bbb; flex-shrink: 0; }
+  .hoursDayRow .closedLabel {
+    display: flex; align-items: center; gap: 4px; font-size: 11px; color: #999;
+    text-transform: none; margin: 0; white-space: nowrap; flex-shrink: 0;
+  }
 </style>
 </head>
 <body>
@@ -100,7 +122,8 @@
       <label>Phone</label>
       <input type="text" id="bPhone">
       <label>Hours</label>
-      <input type="text" id="bHours" placeholder="e.g. Mon-Sat 11am-9pm">
+      <div id="hoursSummary" class="hoursSummary">Tap to set hours for each day</div>
+      <div id="hoursEditor" class="hoursEditor" style="display:none;"></div>
       <label>Photo (optional)</label>
       <div id="dropZone" class="dropZone">
         <div id="dropZoneText">📷 Drag &amp; drop a photo here, or click to choose</div>
@@ -209,6 +232,84 @@ document.getElementById('useUrlToggle').addEventListener('click', () => {
   imageUrlInput.style.display = imageUrlInput.style.display === 'none' ? 'block' : 'none';
 });
 
+// ---------------- Weekly hours picker (Mon-Sun) ----------------
+const DAYS = [
+  { key: 'mon', label: 'Mon' }, { key: 'tue', label: 'Tue' }, { key: 'wed', label: 'Wed' },
+  { key: 'thu', label: 'Thu' }, { key: 'fri', label: 'Fri' }, { key: 'sat', label: 'Sat' },
+  { key: 'sun', label: 'Sun' }
+];
+function defaultHours(){
+  const h = {};
+  DAYS.forEach(d => { h[d.key] = { open: '09:00', close: '17:00', closed: false }; });
+  return h;
+}
+let hoursState = defaultHours();
+
+function buildHoursEditor(){
+  const editor = document.getElementById('hoursEditor');
+  editor.innerHTML = '';
+  DAYS.forEach(d => {
+    const st = hoursState[d.key];
+    const row = document.createElement('div');
+    row.className = 'hoursDayRow';
+    row.innerHTML = `
+      <span class="dayLabel">${d.label}</span>
+      <input type="time" data-day="${d.key}" data-field="open" value="${st.open}" ${st.closed ? 'disabled' : ''}>
+      <span class="toLabel">–</span>
+      <input type="time" data-day="${d.key}" data-field="close" value="${st.close}" ${st.closed ? 'disabled' : ''}>
+      <label class="closedLabel"><input type="checkbox" data-day="${d.key}" data-field="closed" ${st.closed ? 'checked' : ''}> Closed</label>
+    `;
+    editor.appendChild(row);
+  });
+  editor.querySelectorAll('input').forEach(inp => {
+    inp.addEventListener('change', (e) => {
+      const day = e.target.dataset.day, field = e.target.dataset.field;
+      if (field === 'closed') hoursState[day].closed = e.target.checked;
+      else hoursState[day][field] = e.target.value;
+      buildHoursEditor();
+      updateHoursSummary();
+    });
+  });
+}
+
+function to12Hour(t){
+  const [hh, mm] = t.split(':').map(Number);
+  const period = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${String(mm).padStart(2, '0')} ${period}`;
+}
+
+function updateHoursSummary(){
+  const summary = document.getElementById('hoursSummary');
+  const groups = [];
+  DAYS.forEach(d => {
+    const st = hoursState[d.key];
+    const text = st.closed ? 'Closed' : `${to12Hour(st.open)} – ${to12Hour(st.close)}`;
+    const last = groups[groups.length - 1];
+    if (last && last.text === text) last.days.push(d.label);
+    else groups.push({ text, days: [d.label] });
+  });
+  summary.textContent = groups.map(g => {
+    const label = g.days.length > 1 ? `${g.days[0]}–${g.days[g.days.length - 1]}` : g.days[0];
+    return `${label}: ${g.text}`;
+  }).join(', ');
+}
+
+document.getElementById('hoursSummary').addEventListener('click', () => {
+  const editor = document.getElementById('hoursEditor');
+  editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+});
+
+function resetHoursPicker(){
+  hoursState = defaultHours();
+  buildHoursEditor();
+  updateHoursSummary();
+  document.getElementById('hoursEditor').style.display = 'none';
+}
+
+buildHoursEditor();
+updateHoursSummary();
+
 function showView(view){
   document.getElementById('authView').style.display = view === 'auth' ? 'block' : 'none';
   document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
@@ -263,7 +364,7 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     description: document.getElementById('bDescription').value,
     address: document.getElementById('bAddress').value,
     phone: document.getElementById('bPhone').value,
-    hours: document.getElementById('bHours').value,
+    hours: hoursState,
     imageUrl: document.getElementById('bImageUrl').value,
     dealTitle: document.getElementById('bDealTitle').value,
     dealDescription: document.getElementById('bDealDescription').value,
@@ -277,10 +378,11 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
   const data = await res.json();
   if (res.ok){
     document.getElementById('addMsg').textContent = 'Added! It\'s live on the site now.';
-    ['bName','bDescription','bAddress','bPhone','bHours','bImageUrl','bDealTitle','bDealDescription','bDealEndDate'].forEach(id => {
+    ['bName','bDescription','bAddress','bPhone','bImageUrl','bDealTitle','bDealDescription','bDealEndDate'].forEach(id => {
       document.getElementById(id).value = '';
     });
     resetImagePicker();
+    resetHoursPicker();
     loadMyListings();
   } else {
     document.getElementById('addMsg').textContent = data.error || 'Could not add business.';

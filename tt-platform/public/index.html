@@ -196,6 +196,35 @@ document.getElementById('accountBtn').addEventListener('click', async (e) => {
 });
 window.addEventListener('click', () => { document.getElementById('accountDropdown').style.display = 'none'; });
 
+const DAY_LABELS_LIST = [
+  { key: 'mon', label: 'Mon' }, { key: 'tue', label: 'Tue' }, { key: 'wed', label: 'Wed' },
+  { key: 'thu', label: 'Thu' }, { key: 'fri', label: 'Fri' }, { key: 'sat', label: 'Sat' },
+  { key: 'sun', label: 'Sun' }
+];
+function to12Hour(t){
+  const [hh, mm] = t.split(':').map(Number);
+  const period = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${String(mm).padStart(2, '0')} ${period}`;
+}
+function formatHours(h){
+  if (!h) return '';
+  if (typeof h === 'string') return h;
+  const groups = [];
+  DAY_LABELS_LIST.forEach(d => {
+    const st = h[d.key];
+    if (!st) return;
+    const text = st.closed ? 'Closed' : `${to12Hour(st.open)} – ${to12Hour(st.close)}`;
+    const last = groups[groups.length - 1];
+    if (last && last.text === text) last.days.push(d.label);
+    else groups.push({ text, days: [d.label] });
+  });
+  return groups.map(g => {
+    const label = g.days.length > 1 ? `${g.days[0]}–${g.days[g.days.length - 1]}` : g.days[0];
+    return `${label}: ${g.text}`;
+  }).join(', ');
+}
+
 function activeDeals(biz){
   const now = new Date();
   return (biz.deals || []).filter(d => !d.endDate || new Date(d.endDate) >= now);
@@ -209,7 +238,7 @@ function cardHtml(biz){
     <div class="cardBody">
       ${biz.isFeatured ? '<div class="featuredBadge">⭐ Featured</div>' : ''}
       <div class="cardName">${escapeHtml(biz.name)}</div>
-      <div class="cardMeta">${escapeHtml(biz.hours || '')}</div>
+      <div class="cardMeta">${escapeHtml(formatHours(biz.hours))}</div>
       ${deals.length ? `<div class="dealBadge">${escapeHtml(deals[0].title)}</div>` : ''}
     </div>
   </div>`;
@@ -273,7 +302,7 @@ function openDetail(id){
     <div class="desc">${escapeHtml(biz.description)}</div>
     ${biz.address ? `<div class="row"><b>Address:</b> ${escapeHtml(biz.address)}</div>` : ''}
     ${biz.phone ? `<div class="row"><b>Phone:</b> ${escapeHtml(biz.phone)}</div>` : ''}
-    ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(biz.hours)}</div>` : ''}
+    ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
     ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
     <button id="detailClose">Close</button>
   `;

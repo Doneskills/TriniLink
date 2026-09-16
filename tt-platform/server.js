@@ -11,6 +11,56 @@ app.use(express.static(path.join(__dirname, 'public')));
 let businessesCol = null;
 let usersCol = null;
 
+// ---------------- Weekly hours (Mon-Sun open/close per day) ----------------
+const DAY_KEYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
+const DAY_LABELS = { mon: 'Mon', tue: 'Tue', wed: 'Wed', thu: 'Thu', fri: 'Fri', sat: 'Sat', sun: 'Sun' };
+const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+// Accepts the new per-day object from account.html's hours picker, or a plain
+// string (e.g. from admin.html's old-style text field) — stores either safely.
+function sanitizeHours(h){
+  if (h && typeof h === 'object' && !Array.isArray(h)){
+    const clean = {};
+    DAY_KEYS.forEach(k => {
+      const d = h[k] || {};
+      clean[k] = {
+        closed: !!d.closed,
+        open: TIME_RE.test(d.open) ? d.open : '09:00',
+        close: TIME_RE.test(d.close) ? d.close : '17:00'
+      };
+    });
+    return clean;
+  }
+  return String(h || '').slice(0, 100);
+}
+
+function to12Hour(t){
+  const [hh, mm] = t.split(':').map(Number);
+  const period = hh >= 12 ? 'PM' : 'AM';
+  const h12 = hh % 12 === 0 ? 12 : hh % 12;
+  return `${h12}:${String(mm).padStart(2, '0')} ${period}`;
+}
+
+// Turns the per-day hours object into a readable summary, grouping
+// consecutive days that share the same hours (e.g. "Mon–Fri: 9:00 AM – 5:00 PM, Sat–Sun: Closed").
+function formatHours(h){
+  if (!h) return '';
+  if (typeof h === 'string') return h;
+  const groups = [];
+  DAY_KEYS.forEach(k => {
+    const d = h[k];
+    if (!d) return;
+    const text = d.closed ? 'Closed' : `${to12Hour(d.open)} – ${to12Hour(d.close)}`;
+    const last = groups[groups.length - 1];
+    if (last && last.text === text) last.days.push(DAY_LABELS[k]);
+    else groups.push({ text, days: [DAY_LABELS[k]] });
+  });
+  return groups.map(g => {
+    const label = g.days.length > 1 ? `${g.days[0]}–${g.days[g.days.length - 1]}` : g.days[0];
+    return `${label}: ${g.text}`;
+  }).join(', ');
+}
+
 async function initDb(){
   if (!process.env.MONGODB_URI){
     console.log('No MONGODB_URI set — the site will run but nothing will save.');
@@ -186,7 +236,7 @@ app.get('/biz/:id', async (req, res) => {
     <div class="desc">${escapeHtml(biz.description)}</div>
     ${biz.address ? `<div class="infoRow"><b>📍 Address:</b> ${escapeHtml(biz.address)}</div>` : ''}
     ${biz.phone ? `<div class="infoRow"><b>📞 Phone:</b> <a href="tel:${escapeHtml(biz.phone)}">${escapeHtml(biz.phone)}</a></div>` : ''}
-    ${biz.hours ? `<div class="infoRow"><b>🕒 Hours:</b> ${escapeHtml(biz.hours)}</div>` : ''}
+    ${biz.hours ? `<div class="infoRow"><b>🕒 Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
     ${activeDeals.map(d => `<div class="dealBox"><div class="title">🔥 ${escapeHtml(d.title)}</div>${escapeHtml(d.description)}</div>`).join('')}
   </div>
   <footer>
@@ -392,7 +442,7 @@ app.post('/api/my/businesses', requireUser, async (req, res) => {
       description: String(b.description || '').slice(0, 500),
       address: String(b.address || '').slice(0, 200),
       phone: String(b.phone || '').slice(0, 40),
-      hours: String(b.hours || '').slice(0, 100),
+      hours: sanitizeHours(b.hours),
       imageUrl: String(b.imageUrl || '').slice(0, 500),
       featured: false,
       deals: [],
@@ -427,7 +477,7 @@ app.put('/api/my/businesses/:id', requireUser, async (req, res) => {
       description: String(b.description || '').slice(0, 500),
       address: String(b.address || '').slice(0, 200),
       phone: String(b.phone || '').slice(0, 40),
-      hours: String(b.hours || '').slice(0, 100),
+      hours: sanitizeHours(b.hours),
       imageUrl: String(b.imageUrl || '').slice(0, 500)
     };
     await businessesCol.updateOne({ _id: biz._id }, { $set: update });
@@ -465,7 +515,7 @@ app.post('/api/admin/businesses', requireAdmin, async (req, res) => {
       description: String(b.description || '').slice(0, 500),
       address: String(b.address || '').slice(0, 200),
       phone: String(b.phone || '').slice(0, 40),
-      hours: String(b.hours || '').slice(0, 100),
+      hours: sanitizeHours(b.hours),
       imageUrl: String(b.imageUrl || '').slice(0, 500),
       featured: !!b.featured,
       deals: [],
