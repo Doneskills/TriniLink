@@ -5,7 +5,7 @@ const bcrypt = require('bcryptjs');
 const { MongoClient, ObjectId } = require('mongodb');
 
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '25mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Photo arrays: up to 10 images, stored as data URLs (already resized/compressed client-side).
@@ -492,6 +492,7 @@ app.put('/api/my/businesses/:id', requireUser, async (req, res) => {
     };
     if (Array.isArray(b.photos)) update.photos = sanitizePhotoArray(b.photos);
     if (Array.isArray(b.menuPhotos)) update.menuPhotos = sanitizePhotoArray(b.menuPhotos);
+    if (typeof b.hiring === 'boolean') update.hiring = b.hiring;
     await businessesCol.updateOne({ _id: biz._id }, { $set: update });
     res.json({ ok: true });
   } catch (err) {

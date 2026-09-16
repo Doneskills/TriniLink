@@ -182,10 +182,7 @@
       <h2>Settings</h2>
       <p>Signed in as <b id="meEmail"></b></p>
       <p style="margin-top:10px;">Current plan: <span class="planBadge" id="planBadge">Free</span></p>
-      <div id="premiumFreeView">
-        <p class="premiumNote">You're on the Free plan.</p>
-        <button class="secondary" id="openPlanBtn" style="margin-top:10px;">💎 View Plan &amp; Upgrade</button>
-      </div>
+      <div id="premiumFreeView"></div>
       <div id="premiumActiveView" style="display:none;">
         <p class="premiumNote" id="premiumStatusText"></p>
       </div>
@@ -219,6 +216,10 @@
 
 <script>
 let token = localStorage.getItem('ttp_token') || '';
+
+function escapeHtml(s){
+  return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
 
 // ---------------- Business photos (multiple, click-to-upload) ----------------
 const imageUrlInput = document.getElementById('bImageUrl');
@@ -459,6 +460,7 @@ document.getElementById('logoutBtn').addEventListener('click', () => {
 });
 
 document.getElementById('addBizBtn').addEventListener('click', async () => {
+  document.getElementById('addMsg').textContent = 'Adding...';
   const body = {
     name: document.getElementById('bName').value,
     description: document.getElementById('bDescription').value,
@@ -472,26 +474,209 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     dealDescription: document.getElementById('bDealDescription').value,
     dealEndDate: document.getElementById('bDealEndDate').value
   };
-  const res = await fetch('/api/my/businesses', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-    body: JSON.stringify(body)
-  });
-  const data = await res.json();
-  if (res.ok){
-    document.getElementById('addMsg').textContent = 'Added! It\'s live on the site now.';
-    ['bName','bDescription','bAddress','bPhone','bImageUrl','bDealTitle','bDealDescription','bDealEndDate'].forEach(id => {
-      document.getElementById(id).value = '';
+  try {
+    const res = await fetch('/api/my/businesses', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+      body: JSON.stringify(body)
     });
-    resetImagePicker();
-    resetHoursPicker();
-    resetMenuPhotos();
-    loadMyListings();
-    maybeShowPremiumPopupAfterGoLive();
-  } else {
-    document.getElementById('addMsg').textContent = data.error || 'Could not add business.';
+    const data = await res.json();
+    if (res.ok){
+      document.getElementById('addMsg').textContent = 'Added! It\'s live on the site now.';
+      ['bName','bDescription','bAddress','bPhone','bImageUrl','bDealTitle','bDealDescription','bDealEndDate'].forEach(id => {
+        document.getElementById(id).value = '';
+      });
+      resetImagePicker();
+      resetHoursPicker();
+      resetMenuPhotos();
+      loadMyListings();
+      maybeShowPremiumPopupAfterGoLive();
+    } else {
+      document.getElementById('addMsg').textContent = data.error || 'Could not add business.';
+    }
+  } catch (err) {
+    document.getElementById('addMsg').textContent = 'Something went wrong sending that — please try again.';
   }
 });
+
+// ---------------- Reusable pickers for inline editing an existing listing ----------------
+function createEditHoursPicker(container, initial){
+  const state = {};
+  DAYS.forEach(d => {
+    const src = (initial && initial[d.key]) || {};
+    state[d.key] = { open: src.open || '09:00', close: src.close || '17:00', closed: !!src.closed };
+  });
+  const summary = document.createElement('div');
+  summary.className = 'hoursSummary';
+  const editor = document.createElement('div');
+  editor.className = 'hoursEditor';
+  editor.style.display = 'none';
+  container.appendChild(summary);
+  container.appendChild(editor);
+
+  function updateSummary(){
+    const groups = [];
+    DAYS.forEach(d => {
+      const st = state[d.key];
+      const text = st.closed ? 'Closed' : `${to12Hour(st.open)} – ${to12Hour(st.close)}`;
+      const last = groups[groups.length - 1];
+      if (last && last.text === text) last.days.push(d.label);
+      else groups.push({ text, days: [d.label] });
+    });
+    summary.textContent = groups.map(g => {
+      const label = g.days.length > 1 ? `${g.days[0]}–${g.days[g.days.length - 1]}` : g.days[0];
+      return `${label}: ${g.text}`;
+    }).join(', ');
+  }
+  function rebuild(){
+    editor.innerHTML = '';
+    DAYS.forEach(d => {
+      const st = state[d.key];
+      const row = document.createElement('div');
+      row.className = 'hoursDayRow';
+      row.innerHTML = `
+        <span class="dayLabel">${d.label}</span>
+        <input type="time" data-day="${d.key}" data-field="open" value="${st.open}" ${st.closed ? 'disabled' : ''}>
+        <span class="toLabel">–</span>
+        <input type="time" data-day="${d.key}" data-field="close" value="${st.close}" ${st.closed ? 'disabled' : ''}>
+        <label class="closedLabel"><input type="checkbox" data-day="${d.key}" data-field="closed" ${st.closed ? 'checked' : ''}> Closed</label>
+      `;
+      editor.appendChild(row);
+    });
+    editor.querySelectorAll('input').forEach(inp => {
+      inp.addEventListener('change', (e) => {
+        const day = e.target.dataset.day, field = e.target.dataset.field;
+        if (field === 'closed') state[day].closed = e.target.checked;
+        else state[day][field] = e.target.value;
+        rebuild();
+        updateSummary();
+      });
+    });
+  }
+  summary.addEventListener('click', () => {
+    editor.style.display = editor.style.display === 'none' ? 'block' : 'none';
+  });
+  rebuild();
+  updateSummary();
+  return { getHours: () => state };
+}
+
+function createEditPhotoPicker(container, initial, label){
+  const state = Array.isArray(initial) ? initial.slice() : [];
+  const btn = document.createElement('div');
+  btn.className = 'menuUploadBtn';
+  btn.textContent = label;
+  const fileInput = document.createElement('input');
+  fileInput.type = 'file'; fileInput.accept = 'image/*'; fileInput.multiple = true; fileInput.style.display = 'none';
+  const grid = document.createElement('div');
+  container.appendChild(btn);
+  container.appendChild(fileInput);
+  container.appendChild(grid);
+
+  function render(){
+    grid.innerHTML = '';
+    state.forEach((url, i) => {
+      const wrap = document.createElement('div');
+      wrap.className = 'menuPhotoPreview';
+      wrap.innerHTML = `<img src="${url}"><div class="removeBtn">✕</div>`;
+      wrap.querySelector('.removeBtn').addEventListener('click', () => {
+        state.splice(i, 1);
+        render();
+      });
+      grid.appendChild(wrap);
+    });
+  }
+  btn.addEventListener('click', () => fileInput.click());
+  fileInput.addEventListener('change', (e) => {
+    Array.from(e.target.files).forEach(file => {
+      if (!file.type.startsWith('image/')) return;
+      if (state.length >= 10){ alert('You can add up to 10 photos.'); return; }
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 800;
+          let w = img.width, h = img.height;
+          if (w > maxDim || h > maxDim){
+            if (w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
+            else { w = Math.round(w * maxDim / h); h = maxDim; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w; canvas.height = h;
+          canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+          state.push(canvas.toDataURL('image/jpeg', 0.75));
+          render();
+        };
+        img.src = evt.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+    fileInput.value = '';
+  });
+  render();
+  return { getPhotos: () => state };
+}
+
+function buildEditPanel(container, biz){
+  container.innerHTML = `
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">Description</label>
+    <textarea id="editDesc_${biz._id}" style="width:100%;padding:8px;background:#fdf6ec;border:1px solid #e8dcc8;border-radius:6px;font-size:13px;">${escapeHtml(biz.description || '')}</textarea>
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">Address</label>
+    <input id="editAddr_${biz._id}" type="text" value="${escapeHtml(biz.address || '')}" style="width:100%;padding:8px;background:#fdf6ec;border:1px solid #e8dcc8;border-radius:6px;font-size:13px;">
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">Phone</label>
+    <input id="editPhone_${biz._id}" type="text" value="${escapeHtml(biz.phone || '')}" style="width:100%;padding:8px;background:#fdf6ec;border:1px solid #e8dcc8;border-radius:6px;font-size:13px;">
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">Hours</label>
+    <div id="editHoursWrap_${biz._id}"></div>
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">Photos</label>
+    <div id="editPhotosWrap_${biz._id}"></div>
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">Menu Photos</label>
+    <div id="editMenuWrap_${biz._id}"></div>
+    <button id="editHiringBtn_${biz._id}" type="button" class="hiringBtn${biz.hiring ? ' on' : ''}" style="margin-top:10px;">${biz.hiring ? '✅ Hiring Now' : '📢 Not Hiring'}</button>
+    <button id="editSaveBtn_${biz._id}" style="margin-top:10px;">Save Changes</button>
+    <div class="msg" id="editMsg_${biz._id}"></div>
+  `;
+  const hoursCtrl = createEditHoursPicker(document.getElementById('editHoursWrap_' + biz._id), biz.hours);
+  const photosCtrl = createEditPhotoPicker(document.getElementById('editPhotosWrap_' + biz._id), biz.photos, '📷 Click to add photo(s)');
+  const menuCtrl = createEditPhotoPicker(document.getElementById('editMenuWrap_' + biz._id), biz.menuPhotos, '📋 Click to add menu photo(s)');
+  let hiringVal = !!biz.hiring;
+  document.getElementById('editHiringBtn_' + biz._id).addEventListener('click', (e) => {
+    hiringVal = !hiringVal;
+    e.target.className = 'hiringBtn' + (hiringVal ? ' on' : '');
+    e.target.textContent = hiringVal ? '✅ Hiring Now' : '📢 Not Hiring';
+  });
+  document.getElementById('editSaveBtn_' + biz._id).addEventListener('click', async () => {
+    const msg = document.getElementById('editMsg_' + biz._id);
+    msg.textContent = 'Saving...';
+    const photos = photosCtrl.getPhotos();
+    const body = {
+      name: biz.name,
+      description: document.getElementById('editDesc_' + biz._id).value,
+      address: document.getElementById('editAddr_' + biz._id).value,
+      phone: document.getElementById('editPhone_' + biz._id).value,
+      hours: hoursCtrl.getHours(),
+      photos: photos,
+      imageUrl: photos[0] || biz.imageUrl || '',
+      menuPhotos: menuCtrl.getPhotos(),
+      hiring: hiringVal
+    };
+    try {
+      const res = await fetch('/api/my/businesses/' + biz._id, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(body)
+      });
+      if (res.ok){
+        msg.textContent = 'Saved!';
+        loadMyListings();
+      } else {
+        const data = await res.json();
+        msg.textContent = data.error || 'Could not save changes.';
+      }
+    } catch (err) {
+      msg.textContent = 'Something went wrong saving — please try again.';
+    }
+  });
+}
 
 async function loadMyListings(){
   const res = await fetch('/api/my/businesses', { headers: { 'x-auth-token': token } });
@@ -508,16 +693,24 @@ async function loadMyListings(){
     viewLink.target = '_blank';
     viewLink.textContent = '🔗 View Page';
     viewLink.style.cssText = 'font-size:12px;color:#e0562f;text-decoration:none;margin-right:10px;';
-    const hiringBtn = document.createElement('button');
-    hiringBtn.className = 'hiringBtn' + (biz.hiring ? ' on' : '');
-    hiringBtn.textContent = biz.hiring ? '✅ Hiring Now' : '📢 Not Hiring';
-    hiringBtn.addEventListener('click', async () => {
-      const res = await fetch('/api/my/businesses/' + biz._id + '/hiring', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-        body: JSON.stringify({ hiring: !biz.hiring })
-      });
-      if (res.ok) loadMyListings();
+    const editBtn = document.createElement('button');
+    editBtn.className = 'secondary';
+    editBtn.style.cssText = 'width:auto;padding:6px 12px;font-size:12px;margin:0;';
+    editBtn.textContent = 'Edit';
+    const editPanel = document.createElement('div');
+    editPanel.style.cssText = 'width:100%;display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e8dcc8;';
+    editBtn.addEventListener('click', () => {
+      if (editPanel.style.display === 'none'){
+        if (!editPanel.dataset.built){
+          buildEditPanel(editPanel, biz);
+          editPanel.dataset.built = '1';
+        }
+        editPanel.style.display = 'block';
+        editBtn.textContent = 'Close';
+      } else {
+        editPanel.style.display = 'none';
+        editBtn.textContent = 'Edit';
+      }
     });
     const delBtn = document.createElement('button');
     delBtn.className = 'danger';
@@ -527,8 +720,9 @@ async function loadMyListings(){
       loadMyListings();
     });
     row.appendChild(viewLink);
-    row.appendChild(hiringBtn);
+    row.appendChild(editBtn);
     row.appendChild(delBtn);
+    row.appendChild(editPanel);
     box.appendChild(row);
   });
 }
@@ -577,8 +771,7 @@ function renderPremiumSection(data){
   }
 }
 
-// ---------------- Premium popup (one-time after go-live, or opened manually) ----------------
-document.getElementById('openPlanBtn').addEventListener('click', openPremiumPopup);
+// ---------------- Premium popup (one-time after go-live) ----------------
 document.getElementById('premiumPopupClose').addEventListener('click', closePremiumPopup);
 document.getElementById('continueFreeBtn').addEventListener('click', closePremiumPopup);
 
