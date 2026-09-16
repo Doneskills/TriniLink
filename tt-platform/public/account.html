@@ -95,6 +95,20 @@
     background: #c94a3a; color: #fff; font-size: 11px; line-height: 18px; text-align: center;
     cursor: pointer;
   }
+  #premiumPopup {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center; z-index: 60; padding: 16px;
+  }
+  #premiumPopup.open { display: flex; }
+  #premiumPopupPanel {
+    background: #fff; border-radius: 14px; padding: 24px 20px; max-width: 420px; width: 100%;
+    max-height: 85vh; overflow-y: auto; position: relative;
+  }
+  #premiumPopupClose {
+    position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: #f0e4d0; color: #2a2a2a; font-size: 16px; cursor: pointer;
+  }
+  #premiumPopupPanel h2 { font-size: 19px; margin-bottom: 10px; padding-right: 30px; }
 </style>
 </head>
 <body>
@@ -177,19 +191,8 @@
       <p>Signed in as <b id="meEmail"></b></p>
       <p style="margin-top:10px;">Current plan: <span class="planBadge" id="planBadge">Free</span></p>
       <div id="premiumFreeView">
-        <p class="premiumNote">Premium unlocks featured placement, more photos per listing, and posting more frequent deals.</p>
-        <div class="tabRow" style="margin-top:10px;">
-          <button id="tabPaypalPay" class="active">PayPal (monthly)</button>
-          <button id="tabWipayPay">WiPay (3 months)</button>
-        </div>
-        <div id="paypalPayPane">
-          <div id="paypal-button-container"></div>
-          <p class="premiumNote" style="margin-top:8px;">Auto-renews monthly — nothing to repay manually.</p>
-        </div>
-        <div id="wipayPayPane" style="display:none;">
-          <button class="secondary" id="wipayBtn">Pay 3 months via WiPay — TT$75</button>
-          <p class="premiumNote" style="margin-top:8px;">One-time payment covering 90 days. You'll need to repay manually when it lapses.</p>
-        </div>
+        <p class="premiumNote">You're on the Free plan.</p>
+        <button class="secondary" id="openPlanBtn" style="margin-top:10px;">💎 View Plan &amp; Upgrade</button>
       </div>
       <div id="premiumActiveView" style="display:none;">
         <p class="premiumNote" id="premiumStatusText"></p>
@@ -199,6 +202,27 @@
     </div>
   </div>
 
+</div>
+
+<div id="premiumPopup">
+  <div id="premiumPopupPanel">
+    <button id="premiumPopupClose" aria-label="Close">✕</button>
+    <h2>Go Premium ✨</h2>
+    <p class="premiumNote">Premium unlocks featured placement, more photos per listing, and posting more frequent deals.</p>
+    <div class="tabRow" style="margin-top:10px;">
+      <button id="tabPaypalPay" class="active">PayPal (monthly)</button>
+      <button id="tabWipayPay">WiPay (3 months)</button>
+    </div>
+    <div id="paypalPayPane">
+      <div id="paypal-button-container"></div>
+      <p class="premiumNote" style="margin-top:8px;">Auto-renews monthly — nothing to repay manually.</p>
+    </div>
+    <div id="wipayPayPane" style="display:none;">
+      <button class="secondary" id="wipayBtn">Pay 3 months via WiPay — TT$75</button>
+      <p class="premiumNote" style="margin-top:8px;">One-time payment covering 90 days. You'll need to repay manually when it lapses.</p>
+    </div>
+    <button class="secondary" id="continueFreeBtn" style="margin-top:14px;">Continue with Free</button>
+  </div>
 </div>
 
 <script>
@@ -463,6 +487,7 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     resetHoursPicker();
     resetMenuPhotos();
     loadMyListings();
+    maybeShowPremiumPopupAfterGoLive();
   } else {
     document.getElementById('addMsg').textContent = data.error || 'Could not add business.';
   }
@@ -508,10 +533,15 @@ async function loadMyListings(){
   });
 }
 
+let myPlan = 'free';
+let myEmail = '';
+
 async function enterApp(){
   const res = await fetch('/api/me', { headers: { 'x-auth-token': token } });
   if (!res.ok){ showView('auth'); return; }
   const data = await res.json();
+  myPlan = data.plan;
+  myEmail = data.email;
   document.getElementById('meEmail').textContent = data.email;
   document.getElementById('planBadge').textContent = data.plan === 'premium' ? 'Premium' : 'Free';
   showView('main');
@@ -544,8 +574,27 @@ function renderPremiumSection(data){
   } else {
     freeView.style.display = 'block';
     activeView.style.display = 'none';
-    setupPaypalButton();
   }
+}
+
+// ---------------- Premium popup (one-time after go-live, or opened manually) ----------------
+document.getElementById('openPlanBtn').addEventListener('click', openPremiumPopup);
+document.getElementById('premiumPopupClose').addEventListener('click', closePremiumPopup);
+document.getElementById('continueFreeBtn').addEventListener('click', closePremiumPopup);
+
+function openPremiumPopup(){
+  document.getElementById('premiumPopup').classList.add('open');
+  setupPaypalButton();
+}
+function closePremiumPopup(){
+  document.getElementById('premiumPopup').classList.remove('open');
+}
+function maybeShowPremiumPopupAfterGoLive(){
+  if (myPlan === 'premium') return;
+  const seenKey = 'ttp_premium_popup_seen_' + myEmail;
+  if (localStorage.getItem(seenKey)) return;
+  localStorage.setItem(seenKey, '1');
+  openPremiumPopup();
 }
 
 document.getElementById('tabPaypalPay').addEventListener('click', () => {
@@ -597,6 +646,7 @@ async function setupPaypalButton(){
         });
         if (res.ok){
           document.getElementById('premiumMsg').textContent = 'Subscribed! Premium is now active.';
+          closePremiumPopup();
           enterApp();
         } else {
           document.getElementById('premiumMsg').textContent = 'Could not confirm subscription.';
