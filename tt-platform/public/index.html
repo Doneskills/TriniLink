@@ -95,13 +95,16 @@
     background: rgba(0,0,0,0.45); color: #fff; font-size: 18px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
-  #detailModal .cardImg { height: 220px; margin-top: -52px; }
+  #detailMapWrap { height: 200px; margin-top: -52px; overflow: hidden; background: #f0d9c0; }
+  #detailMapWrap iframe { width: 100%; height: 100%; border: 0; display: block; }
   #detailContent { max-width: 600px; margin: 0 auto; padding: 20px 20px 60px; }
   #detailContent h2 { font-size: 22px; margin-bottom: 4px; }
   #detailContent .meta { color: #888; font-size: 13px; margin-bottom: 10px; }
   #detailContent .desc { font-size: 14px; line-height: 1.5; margin-bottom: 14px; }
   #detailContent .row { font-size: 13px; margin-bottom: 6px; }
   #detailContent .row b { color: #555; }
+  .overviewPhoto { margin: 14px 0; }
+  .overviewPhoto img { width: 100%; border-radius: 10px; display: block; }
   .detailTabRow {
     display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #eee;
     position: sticky; top: 0; background: #fdf6ec; z-index: 1;
@@ -113,6 +116,10 @@
   .detailTabBtn.active { color: #e0562f; border-bottom-color: #e0562f; }
   .menuPhotoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
   .menuPhotoGrid img { width: 100%; border-radius: 8px; display: block; }
+  .hiringBadge {
+    display: inline-block; margin-bottom: 10px; background: #2e7d32; color: #fff;
+    font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 700;
+  }
   footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; }
 </style>
 </head>
@@ -153,7 +160,9 @@
   <div id="detailTopBar">
     <button id="detailClose" aria-label="Close">✕</button>
   </div>
-  <div class="cardImg" id="detailImg">🍽️</div>
+  <div id="detailMapWrap">
+    <iframe id="detailMapFrame" loading="lazy" referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>
   <div id="detailContent"></div>
 </div>
 
@@ -308,8 +317,10 @@ function render(){
 function openDetail(id){
   const biz = allBusinesses.find(b => b._id === id);
   if (!biz) return;
-  document.getElementById('detailImg').style.backgroundImage = biz.imageUrl ? `url('${biz.imageUrl}')` : '';
-  document.getElementById('detailImg').textContent = biz.imageUrl ? '' : '🍽️';
+  const mapQuery = encodeURIComponent(
+    `${biz.address || biz.name}, ${biz.area || 'Port of Spain'}, Trinidad and Tobago`
+  );
+  document.getElementById('detailMapFrame').src = `https://www.google.com/maps?q=${mapQuery}&output=embed`;
   renderDetailTabs(biz, 'overview');
   document.getElementById('detailModal').classList.add('open');
   document.getElementById('detailModal').scrollTop = 0;
@@ -329,8 +340,10 @@ function renderDetailTabs(biz, activeTab){
     panelHtml = `
       <h2>${escapeHtml(biz.name)}</h2>
       <div class="meta">${escapeHtml(biz.category)} · ${escapeHtml(biz.area)}</div>
-      <div class="desc">${escapeHtml(biz.description)}</div>
+      ${biz.hiring ? '<div class="hiringBadge">📢 Hiring Now</div>' : ''}
       ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
+      <div class="desc">${escapeHtml(biz.description)}</div>
+      ${biz.imageUrl ? `<div class="overviewPhoto"><img src="${biz.imageUrl}"></div>` : ''}
       <div class="row"><b>Rating:</b> ⭐ No ratings yet</div>
       ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
     `;

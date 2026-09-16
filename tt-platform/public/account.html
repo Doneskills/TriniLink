@@ -45,13 +45,18 @@
   .dropZone.dragover { border-color: #e0562f; color: #e0562f; }
   .dropZone img { max-width: 100%; max-height: 160px; border-radius: 8px; }
   .listingRow {
-    display: flex; justify-content: space-between; align-items: center;
+    display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
     padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px;
   }
   .planBadge {
     display: inline-block; background: #f0e4d0; color: #7a5c30; padding: 4px 10px;
     border-radius: 20px; font-size: 12px; font-weight: 700;
   }
+  .hiringBtn {
+    font-size: 11px; padding: 5px 10px; border-radius: 20px; border: 1px solid #e8dcc8;
+    background: #fff; color: #999; cursor: pointer; margin-right: 8px; white-space: nowrap;
+  }
+  .hiringBtn.on { background: #2e7d32; color: #fff; border-color: #2e7d32; }
   .premiumNote { color: #999; font-size: 13px; margin-top: 10px; line-height: 1.5; }
   .hoursSummary {
     padding: 9px 10px; background: #fdf6ec; border: 1px solid #e8dcc8;
@@ -478,6 +483,17 @@ async function loadMyListings(){
     viewLink.target = '_blank';
     viewLink.textContent = '🔗 View Page';
     viewLink.style.cssText = 'font-size:12px;color:#e0562f;text-decoration:none;margin-right:10px;';
+    const hiringBtn = document.createElement('button');
+    hiringBtn.className = 'hiringBtn' + (biz.hiring ? ' on' : '');
+    hiringBtn.textContent = biz.hiring ? '✅ Hiring Now' : '📢 Not Hiring';
+    hiringBtn.addEventListener('click', async () => {
+      const res = await fetch('/api/my/businesses/' + biz._id + '/hiring', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ hiring: !biz.hiring })
+      });
+      if (res.ok) loadMyListings();
+    });
     const delBtn = document.createElement('button');
     delBtn.className = 'danger';
     delBtn.textContent = 'Delete';
@@ -486,6 +502,7 @@ async function loadMyListings(){
       loadMyListings();
     });
     row.appendChild(viewLink);
+    row.appendChild(hiringBtn);
     row.appendChild(delBtn);
     box.appendChild(row);
   });

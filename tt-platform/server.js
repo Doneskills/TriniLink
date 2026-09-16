@@ -451,6 +451,7 @@ app.post('/api/my/businesses', requireUser, async (req, res) => {
       hours: sanitizeHours(b.hours),
       imageUrl: String(b.imageUrl || '').slice(0, 500),
       menuPhotos: sanitizeMenuPhotos(b.menuPhotos),
+      hiring: false,
       featured: false,
       deals: [],
       createdAt: new Date()
@@ -506,6 +507,21 @@ app.delete('/api/my/businesses/:id', requireUser, async (req, res) => {
     res.json({ ok: true });
   } catch (err) {
     res.status(500).json({ error: 'Could not delete business.' });
+  }
+});
+
+app.patch('/api/my/businesses/:id/hiring', requireUser, async (req, res) => {
+  if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
+  try {
+    const biz = await businessesCol.findOne({ _id: new ObjectId(req.params.id) });
+    if (!biz || biz.ownerId !== req.user._id.toString()){
+      return res.status(403).json({ error: 'You can only edit your own listing.' });
+    }
+    const hiring = !!(req.body && req.body.hiring);
+    await businessesCol.updateOne({ _id: biz._id }, { $set: { hiring } });
+    res.json({ ok: true, hiring });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not update hiring status.' });
   }
 });
 
