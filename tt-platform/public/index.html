@@ -343,7 +343,7 @@ function renderDetailTabs(biz, activeTab){
       ${biz.hiring ? '<div class="hiringBadge">📢 Hiring Now</div>' : ''}
       ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
       <div class="desc">${escapeHtml(biz.description)}</div>
-      ${biz.imageUrl ? `<div class="overviewPhoto"><img src="${biz.imageUrl}"></div>` : ''}
+      ${(biz.photos && biz.photos.length) ? `<div class="overviewPhoto menuPhotoGrid">${biz.photos.map(u => `<img src="${u}">`).join('')}</div>` : (biz.imageUrl ? `<div class="overviewPhoto"><img src="${biz.imageUrl}"></div>` : '')}
       <div class="row"><b>Rating:</b> ⭐ No ratings yet</div>
       ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
     `;

@@ -38,12 +38,6 @@
   .tabRow button.active { background: #e0562f; color: #fff; }
   #app > div { display: none; }
   hr { border: none; border-top: 1px solid #eee; margin: 18px 0; }
-  .dropZone {
-    border: 2px dashed #e8dcc8; border-radius: 10px; padding: 20px; text-align: center;
-    cursor: pointer; font-size: 13px; color: #aaa; transition: border-color 0.2s;
-  }
-  .dropZone.dragover { border-color: #e0562f; color: #e0562f; }
-  .dropZone img { max-width: 100%; max-height: 160px; border-radius: 8px; }
   .listingRow {
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
     padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px;
@@ -158,12 +152,10 @@
       <label>Hours</label>
       <div id="hoursSummary" class="hoursSummary">Tap to set hours for each day</div>
       <div id="hoursEditor" class="hoursEditor" style="display:none;"></div>
-      <label>Photo (optional)</label>
-      <div id="dropZone" class="dropZone">
-        <div id="dropZoneText">📷 Drag &amp; drop a photo here, or click to choose</div>
-        <img id="imagePreview" style="display:none;">
-      </div>
-      <input type="file" id="fileInput" accept="image/*" style="display:none;">
+      <label>Photos (optional)</label>
+      <div id="photoUploadBtn" class="menuUploadBtn">📷 Click to add photo(s)</div>
+      <input type="file" id="photoFileInput" accept="image/*" multiple style="display:none;">
+      <div id="photoPreviewGrid"></div>
       <div id="useUrlToggle" style="font-size:12px;color:#999;margin-top:6px;cursor:pointer;text-decoration:underline;">or paste an image link instead</div>
       <input type="text" id="bImageUrl" style="display:none;margin-top:6px;" placeholder="https://...">
       <label>Menu Photos (optional)</label>
@@ -228,25 +220,19 @@
 <script>
 let token = localStorage.getItem('ttp_token') || '';
 
-// ---------------- Drag-and-drop image picker ----------------
-const dropZone = document.getElementById('dropZone');
-const fileInput = document.getElementById('fileInput');
-const imagePreview = document.getElementById('imagePreview');
-const dropZoneText = document.getElementById('dropZoneText');
+// ---------------- Business photos (multiple, click-to-upload) ----------------
 const imageUrlInput = document.getElementById('bImageUrl');
-
-dropZone.addEventListener('click', () => fileInput.click());
-dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-dropZone.addEventListener('drop', (e) => {
-  e.preventDefault();
-  dropZone.classList.remove('dragover');
-  if (e.dataTransfer.files[0]) handleImageFile(e.dataTransfer.files[0]);
+let photosState = [];
+const photoFileInput = document.getElementById('photoFileInput');
+document.getElementById('photoUploadBtn').addEventListener('click', () => photoFileInput.click());
+photoFileInput.addEventListener('change', (e) => {
+  Array.from(e.target.files).forEach(file => handlePhotoFile(file));
+  photoFileInput.value = '';
 });
-fileInput.addEventListener('change', (e) => { if (e.target.files[0]) handleImageFile(e.target.files[0]); });
 
-function handleImageFile(file){
+function handlePhotoFile(file){
   if (!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
+  if (photosState.length >= 10){ alert('You can add up to 10 photos.'); return; }
   const reader = new FileReader();
   reader.onload = (evt) => {
     const img = new Image();
@@ -260,20 +246,33 @@ function handleImageFile(file){
       const canvas = document.createElement('canvas');
       canvas.width = w; canvas.height = h;
       canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
-      imageUrlInput.value = dataUrl;
-      imagePreview.src = dataUrl;
-      imagePreview.style.display = 'block';
-      dropZoneText.style.display = 'none';
+      photosState.push(canvas.toDataURL('image/jpeg', 0.75));
+      renderPhotoPreviews();
     };
     img.src = evt.target.result;
   };
   reader.readAsDataURL(file);
 }
+
+function renderPhotoPreviews(){
+  const grid = document.getElementById('photoPreviewGrid');
+  grid.innerHTML = '';
+  photosState.forEach((url, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'menuPhotoPreview';
+    wrap.innerHTML = `<img src="${url}"><div class="removeBtn">✕</div>`;
+    wrap.querySelector('.removeBtn').addEventListener('click', () => {
+      photosState.splice(i, 1);
+      renderPhotoPreviews();
+    });
+    grid.appendChild(wrap);
+  });
+}
+
 function resetImagePicker(){
-  imagePreview.style.display = 'none';
-  imagePreview.src = '';
-  dropZoneText.style.display = 'block';
+  photosState = [];
+  renderPhotoPreviews();
+  imageUrlInput.value = '';
   imageUrlInput.style.display = 'none';
 }
 document.getElementById('useUrlToggle').addEventListener('click', () => {
@@ -466,7 +465,8 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     address: document.getElementById('bAddress').value,
     phone: document.getElementById('bPhone').value,
     hours: hoursState,
-    imageUrl: document.getElementById('bImageUrl').value,
+    imageUrl: photosState[0] || document.getElementById('bImageUrl').value,
+    photos: photosState,
     menuPhotos: menuPhotosState,
     dealTitle: document.getElementById('bDealTitle').value,
     dealDescription: document.getElementById('bDealDescription').value,

@@ -8,8 +8,9 @@ const app = express();
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Menu photos: up to 10 images, stored as data URLs (already resized/compressed client-side).
-function sanitizeMenuPhotos(arr){
+// Photo arrays: up to 10 images, stored as data URLs (already resized/compressed client-side).
+// Used for both the business's own photo gallery and its menu photos.
+function sanitizePhotoArray(arr){
   if (!Array.isArray(arr)) return [];
   return arr.slice(0, 10).map(u => String(u || '').slice(0, 400000)).filter(Boolean);
 }
@@ -449,8 +450,9 @@ app.post('/api/my/businesses', requireUser, async (req, res) => {
       address: String(b.address || '').slice(0, 200),
       phone: String(b.phone || '').slice(0, 40),
       hours: sanitizeHours(b.hours),
-      imageUrl: String(b.imageUrl || '').slice(0, 500),
-      menuPhotos: sanitizeMenuPhotos(b.menuPhotos),
+      imageUrl: String(b.imageUrl || '').slice(0, 400000),
+      photos: sanitizePhotoArray(b.photos),
+      menuPhotos: sanitizePhotoArray(b.menuPhotos),
       hiring: false,
       featured: false,
       deals: [],
@@ -486,9 +488,10 @@ app.put('/api/my/businesses/:id', requireUser, async (req, res) => {
       address: String(b.address || '').slice(0, 200),
       phone: String(b.phone || '').slice(0, 40),
       hours: sanitizeHours(b.hours),
-      imageUrl: String(b.imageUrl || '').slice(0, 500)
+      imageUrl: String(b.imageUrl || '').slice(0, 400000)
     };
-    if (Array.isArray(b.menuPhotos)) update.menuPhotos = sanitizeMenuPhotos(b.menuPhotos);
+    if (Array.isArray(b.photos)) update.photos = sanitizePhotoArray(b.photos);
+    if (Array.isArray(b.menuPhotos)) update.menuPhotos = sanitizePhotoArray(b.menuPhotos);
     await businessesCol.updateOne({ _id: biz._id }, { $set: update });
     res.json({ ok: true });
   } catch (err) {
