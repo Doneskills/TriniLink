@@ -107,6 +107,14 @@ function requireAdmin(req, res, next){
   next();
 }
 
+// Accounts created before this feature have no accountType saved — treat those as business accounts.
+function requireBusinessAccount(req, res, next){
+  if (req.user.accountType === 'customer'){
+    return res.status(403).json({ error: 'This account is set up for updates only, not for managing a business listing.' });
+  }
+  next();
+}
+
 // ---------------- Public API ----------------
 app.get('/api/businesses', async (req, res) => {
   if (!businessesCol) return res.json([]);
@@ -259,6 +267,7 @@ app.post('/api/signup', async (req, res) => {
   try {
     const email = String((req.body && req.body.email) || '').trim().toLowerCase();
     const password = String((req.body && req.body.password) || '');
+    const accountType = req.body && req.body.accountType === 'customer' ? 'customer' : 'business';
     if (!email || !password || password.length < 6){
       return res.status(400).json({ error: 'Email and a password of at least 6 characters are required.' });
     }
@@ -266,7 +275,7 @@ app.post('/api/signup', async (req, res) => {
     if (existing) return res.status(400).json({ error: 'An account with that email already exists.' });
     const passwordHash = await bcrypt.hash(password, 10);
     const sessionToken = crypto.randomBytes(24).toString('hex');
-    await usersCol.insertOne({ email, passwordHash, sessionToken, createdAt: new Date() });
+    await usersCol.insertOne({ email, passwordHash, sessionToken, accountType, createdAt: new Date() });
     res.json({ token: sessionToken, email });
   } catch (err) {
     console.error('Signup failed:', err.message);
@@ -300,10 +309,23 @@ app.get('/api/me', requireUser, async (req, res) => {
   }
   res.json({
     email: user.email,
+    accountType: user.accountType === 'customer' ? 'customer' : 'business',
+    preferredArea: user.preferredArea || null,
     plan: user.plan || 'free',
     premiumMethod: user.premiumMethod || null,
     premiumExpiresAt: user.premiumExpiresAt || null
   });
+});
+
+app.post('/api/me/preferences', requireUser, async (req, res) => {
+  if (!usersCol) return res.status(503).json({ error: 'Database not connected' });
+  try {
+    const preferredArea = String((req.body && req.body.preferredArea) || '').slice(0, 100);
+    await usersCol.updateOne({ _id: req.user._id }, { $set: { preferredArea } });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not save preferences.' });
+  }
 });
 
 // ---------------- Premium payments (WiPay one-time + PayPal recurring) ----------------
@@ -437,7 +459,7 @@ app.get('/api/my/businesses', requireUser, async (req, res) => {
   }
 });
 
-app.post('/api/my/businesses', requireUser, async (req, res) => {
+app.post('/api/my/businesses', requireUser, requireBusinessAccount, async (req, res) => {
   if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
   try {
     const b = req.body || {};
@@ -474,7 +496,7 @@ app.post('/api/my/businesses', requireUser, async (req, res) => {
   }
 });
 
-app.put('/api/my/businesses/:id', requireUser, async (req, res) => {
+app.put('/api/my/businesses/:id', requireUser, requireBusinessAccount, async (req, res) => {
   if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
   try {
     const biz = await businessesCol.findOne({ _id: new ObjectId(req.params.id) });
@@ -500,7 +522,7 @@ app.put('/api/my/businesses/:id', requireUser, async (req, res) => {
   }
 });
 
-app.delete('/api/my/businesses/:id', requireUser, async (req, res) => {
+app.delete('/api/my/businesses/:id', requireUser, requireBusinessAccount, async (req, res) => {
   if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
   try {
     const biz = await businessesCol.findOne({ _id: new ObjectId(req.params.id) });
@@ -514,7 +536,7 @@ app.delete('/api/my/businesses/:id', requireUser, async (req, res) => {
   }
 });
 
-app.patch('/api/my/businesses/:id/hiring', requireUser, async (req, res) => {
+app.patch('/api/my/businesses/:id/hiring', requireUser, requireBusinessAccount, async (req, res) => {
   if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
   try {
     const biz = await businessesCol.findOne({ _id: new ObjectId(req.params.id) });

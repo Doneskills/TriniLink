@@ -21,7 +21,7 @@
   }
   h2 { font-size: 17px; margin-bottom: 12px; }
   label { display: block; font-size: 12px; text-transform: uppercase; color: #999; margin: 12px 0 5px; }
-  input, textarea {
+  input, textarea, select {
     width: 100%; padding: 9px 10px; background: #fdf6ec; border: 1px solid #e8dcc8;
     border-radius: 6px; color: #2a2a2a; font-size: 14px;
   }
@@ -128,6 +128,11 @@
         <button id="loginBtn">Log In</button>
       </div>
       <div id="signupForm" style="display:none;">
+        <label>I'm signing up as</label>
+        <div class="tabRow" style="margin-bottom:14px;">
+          <button type="button" id="typeBusiness" class="active">🏢 A Business</button>
+          <button type="button" id="typeCustomer">🔔 For Updates</button>
+        </div>
         <label>Email</label>
         <input type="email" id="signupEmail">
         <label>Password (6+ characters)</label>
@@ -188,6 +193,24 @@
       </div>
       <div class="msg" id="premiumMsg"></div>
       <button class="secondary" id="logoutBtn">Log Out</button>
+    </div>
+  </div>
+
+  <div id="customerView" style="display:none;">
+    <div class="card">
+      <h2>🔔 You're following updates</h2>
+      <p style="font-size:14px;line-height:1.5;">You'll be the first to know when new businesses and deals get added near you. No listing to manage — just sit back and browse.</p>
+      <label>Area you care about most</label>
+      <select id="custArea">
+        <option value="Port of Spain">Port of Spain</option>
+      </select>
+      <button id="custSaveBtn" style="margin-top:10px;">Save</button>
+      <div class="msg" id="custMsg"></div>
+    </div>
+    <div class="card">
+      <h2>Settings</h2>
+      <p>Signed in as <b id="custEmail"></b></p>
+      <button class="secondary" id="custLogoutBtn">Log Out</button>
     </div>
   </div>
 
@@ -414,6 +437,7 @@ function resetMenuPhotos(){
 function showView(view){
   document.getElementById('authView').style.display = view === 'auth' ? 'block' : 'none';
   document.getElementById('mainView').style.display = view === 'main' ? 'block' : 'none';
+  document.getElementById('customerView').style.display = view === 'customer' ? 'block' : 'none';
 }
 
 document.getElementById('tabLogin').addEventListener('click', () => {
@@ -427,6 +451,18 @@ document.getElementById('tabSignup').addEventListener('click', () => {
   document.getElementById('tabLogin').classList.remove('active');
   document.getElementById('signupForm').style.display = 'block';
   document.getElementById('loginForm').style.display = 'none';
+});
+
+let signupAccountType = 'business';
+document.getElementById('typeBusiness').addEventListener('click', () => {
+  signupAccountType = 'business';
+  document.getElementById('typeBusiness').classList.add('active');
+  document.getElementById('typeCustomer').classList.remove('active');
+});
+document.getElementById('typeCustomer').addEventListener('click', () => {
+  signupAccountType = 'customer';
+  document.getElementById('typeCustomer').classList.add('active');
+  document.getElementById('typeBusiness').classList.remove('active');
 });
 
 document.getElementById('loginBtn').addEventListener('click', async () => {
@@ -446,11 +482,32 @@ document.getElementById('signupBtn').addEventListener('click', async () => {
   const password = document.getElementById('signupPassword').value;
   const res = await fetch('/api/signup', {
     method: 'POST', headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
+    body: JSON.stringify({ email, password, accountType: signupAccountType })
   });
   const data = await res.json();
   if (res.ok){ token = data.token; localStorage.setItem('ttp_token', token); enterApp(); }
   else document.getElementById('authMsg').textContent = data.error || 'Could not sign up.';
+});
+
+document.getElementById('custLogoutBtn').addEventListener('click', () => {
+  localStorage.removeItem('ttp_token');
+  token = '';
+  showView('auth');
+});
+
+document.getElementById('custSaveBtn').addEventListener('click', async () => {
+  const msg = document.getElementById('custMsg');
+  msg.textContent = 'Saving...';
+  try {
+    const res = await fetch('/api/me/preferences', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+      body: JSON.stringify({ preferredArea: document.getElementById('custArea').value })
+    });
+    msg.textContent = res.ok ? 'Saved!' : 'Could not save right now.';
+  } catch (err) {
+    msg.textContent = 'Something went wrong saving — please try again.';
+  }
 });
 
 document.getElementById('logoutBtn').addEventListener('click', () => {
@@ -736,6 +793,14 @@ async function enterApp(){
   const data = await res.json();
   myPlan = data.plan;
   myEmail = data.email;
+
+  if (data.accountType === 'customer'){
+    document.getElementById('custEmail').textContent = data.email;
+    if (data.preferredArea) document.getElementById('custArea').value = data.preferredArea;
+    showView('customer');
+    return;
+  }
+
   document.getElementById('meEmail').textContent = data.email;
   document.getElementById('planBadge').textContent = data.plan === 'premium' ? 'Premium' : 'Free';
   showView('main');
