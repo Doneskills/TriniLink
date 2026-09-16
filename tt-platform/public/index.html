@@ -81,24 +81,27 @@
   .emptyState { color: #999; font-size: 14px; padding: 20px 0; }
 
   #detailModal {
-    position: fixed; inset: 0; background: rgba(0,0,0,0.6);
-    display: none; align-items: center; justify-content: center; z-index: 50; padding: 16px;
+    position: fixed; inset: 0; background: #fdf6ec; z-index: 50;
+    overflow-y: auto; visibility: hidden; transform: translateY(100%);
+    transition: transform 0.28s ease;
   }
-  #detailPanel {
-    background: #fff; border-radius: 14px; max-width: 460px; width: 100%;
-    max-height: 85vh; overflow-y: auto;
+  #detailModal.open { visibility: visible; transform: translateY(0); }
+  #detailTopBar {
+    position: sticky; top: 0; z-index: 2; display: flex; justify-content: flex-end;
+    padding: 14px 14px 0;
   }
-  #detailPanel .cardImg { height: 160px; border-radius: 14px 14px 0 0; }
-  #detailContent { padding: 20px; }
-  #detailContent h2 { font-size: 20px; margin-bottom: 4px; }
+  #detailClose {
+    width: 38px; height: 38px; border-radius: 50%; border: none;
+    background: rgba(0,0,0,0.45); color: #fff; font-size: 18px; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #detailModal .cardImg { height: 220px; margin-top: -52px; }
+  #detailContent { max-width: 600px; margin: 0 auto; padding: 20px 20px 60px; }
+  #detailContent h2 { font-size: 22px; margin-bottom: 4px; }
   #detailContent .meta { color: #888; font-size: 13px; margin-bottom: 10px; }
   #detailContent .desc { font-size: 14px; line-height: 1.5; margin-bottom: 14px; }
   #detailContent .row { font-size: 13px; margin-bottom: 6px; }
   #detailContent .row b { color: #555; }
-  #detailClose {
-    margin-top: 16px; width: 100%; padding: 10px; background: #e0562f; color: #fff;
-    border: none; border-radius: 8px; font-weight: 700; cursor: pointer;
-  }
   footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; }
 </style>
 </head>
@@ -136,10 +139,11 @@
 <footer>Built for Port of Spain, Trinidad &amp; Tobago 🇹🇹</footer>
 
 <div id="detailModal">
-  <div id="detailPanel">
-    <div class="cardImg" id="detailImg">🍽️</div>
-    <div id="detailContent"></div>
+  <div id="detailTopBar">
+    <button id="detailClose" aria-label="Close">✕</button>
   </div>
+  <div class="cardImg" id="detailImg">🍽️</div>
+  <div id="detailContent"></div>
 </div>
 
 <script>
@@ -304,16 +308,16 @@ function openDetail(id){
     ${biz.phone ? `<div class="row"><b>Phone:</b> ${escapeHtml(biz.phone)}</div>` : ''}
     ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
     ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
-    <button id="detailClose">Close</button>
   `;
-  document.getElementById('detailModal').style.display = 'flex';
-  document.getElementById('detailClose').addEventListener('click', () => {
-    document.getElementById('detailModal').style.display = 'none';
-  });
+  document.getElementById('detailModal').classList.add('open');
+  document.getElementById('detailModal').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
 }
-document.getElementById('detailModal').addEventListener('click', (e) => {
-  if (e.target.id === 'detailModal') document.getElementById('detailModal').style.display = 'none';
-});
+function closeDetail(){
+  document.getElementById('detailModal').classList.remove('open');
+  document.body.style.overflow = '';
+}
+document.getElementById('detailClose').addEventListener('click', closeDetail);
 
 let searchTimer = null;
 document.getElementById('searchInput').addEventListener('input', (e) => {
