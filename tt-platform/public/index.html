@@ -145,16 +145,10 @@
     <div class="cardGrid" id="featuredGrid"></div>
   </section>
   <section>
-    <div class="sectionTitle">🔥 Deals happening now</div>
-    <div class="cardGrid" id="dealsGrid"><div class="emptyState">Loading...</div></div>
-  </section>
-  <section>
     <div class="sectionTitle">📍 All restaurants</div>
     <div class="cardGrid" id="allGrid"><div class="emptyState">Loading...</div></div>
   </section>
 </main>
-
-<footer>Built for Port of Spain, Trinidad &amp; Tobago 🇹🇹</footer>
 
 <div id="detailModal">
   <div id="detailTopBar">
@@ -293,7 +287,6 @@ async function loadBusinesses(query){
 function render(){
   const featuredSection = document.getElementById('featuredSection');
   const featuredGrid = document.getElementById('featuredGrid');
-  const dealsGrid = document.getElementById('dealsGrid');
   const allGrid = document.getElementById('allGrid');
 
   const featured = shuffle(allBusinesses.filter(b => b.isFeatured));
@@ -303,11 +296,6 @@ function render(){
   } else {
     featuredSection.style.display = 'none';
   }
-
-  const withDeals = allBusinesses.filter(b => activeDeals(b).length > 0);
-  dealsGrid.innerHTML = withDeals.length
-    ? withDeals.map(cardHtml).join('')
-    : '<div class="emptyState">No active deals right now — check back soon!</div>';
 
   allGrid.innerHTML = allBusinesses.length
     ? allBusinesses.map(cardHtml).join('')
