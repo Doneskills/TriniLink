@@ -15,6 +15,32 @@ function sanitizePhotoArray(arr){
   return arr.slice(0, 10).map(u => String(u || '').slice(0, 400000)).filter(Boolean);
 }
 
+// About tab attributes — all optional, Google-Maps-style info chips.
+const ABOUT_FIELDS = ['accessibility', 'serviceOptions', 'popularFor', 'offerings', 'diningOptions', 'atmosphere', 'crowd', 'payments', 'children', 'parking'];
+function sanitizeAbout(obj){
+  const clean = {};
+  if (obj && typeof obj === 'object'){
+    ABOUT_FIELDS.forEach(k => {
+      const v = String(obj[k] || '').trim().slice(0, 200);
+      if (v) clean[k] = v;
+    });
+  }
+  return clean;
+}
+
+// Social links — all optional.
+const SOCIAL_FIELDS = ['facebook', 'instagram', 'website'];
+function sanitizeSocial(obj){
+  const clean = {};
+  if (obj && typeof obj === 'object'){
+    SOCIAL_FIELDS.forEach(k => {
+      const v = String(obj[k] || '').trim().slice(0, 300);
+      if (v) clean[k] = v;
+    });
+  }
+  return clean;
+}
+
 let businessesCol = null;
 let usersCol = null;
 
@@ -475,7 +501,9 @@ app.post('/api/my/businesses', requireUser, requireBusinessAccount, async (req, 
       imageUrl: String(b.imageUrl || '').slice(0, 400000),
       photos: sanitizePhotoArray(b.photos),
       menuPhotos: sanitizePhotoArray(b.menuPhotos),
-      hiring: false,
+      about: sanitizeAbout(b.about),
+      social: sanitizeSocial(b.social),
+      hiring: !!b.hiring,
       featured: false,
       deals: [],
       createdAt: new Date()
@@ -512,9 +540,12 @@ app.put('/api/my/businesses/:id', requireUser, requireBusinessAccount, async (re
       hours: sanitizeHours(b.hours),
       imageUrl: String(b.imageUrl || '').slice(0, 400000)
     };
+    if (b.category) update.category = String(b.category).slice(0, 40);
     if (Array.isArray(b.photos)) update.photos = sanitizePhotoArray(b.photos);
     if (Array.isArray(b.menuPhotos)) update.menuPhotos = sanitizePhotoArray(b.menuPhotos);
     if (typeof b.hiring === 'boolean') update.hiring = b.hiring;
+    if (b.about) update.about = sanitizeAbout(b.about);
+    if (b.social) update.social = sanitizeSocial(b.social);
     await businessesCol.updateOne({ _id: biz._id }, { $set: update });
     res.json({ ok: true });
   } catch (err) {

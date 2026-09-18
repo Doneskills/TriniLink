@@ -42,6 +42,21 @@
     background: none; border: none; width: 100%; text-align: left; cursor: pointer; margin: 0;
   }
   #accountDropdown a:hover, #accountDropdown button:hover { background: #fdf6ec; }
+  #aboutModal {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+    display: none; align-items: center; justify-content: center; z-index: 60; padding: 16px;
+  }
+  #aboutModal.open { display: flex; }
+  #aboutPanel {
+    background: #fff; color: #2a2a2a; border-radius: 14px; padding: 24px 20px; max-width: 420px;
+    width: 100%; max-height: 85vh; overflow-y: auto; position: relative; text-align: left;
+  }
+  #aboutClose {
+    position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%;
+    border: none; background: #f0e4d0; color: #2a2a2a; font-size: 16px; cursor: pointer;
+  }
+  #aboutPanel h2 { font-size: 19px; margin-bottom: 10px; padding-right: 30px; }
+  #aboutPanel p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; color: #555; }
   header h1 { font-size: 26px; letter-spacing: 0.5px; }
   header p { margin-top: 6px; font-size: 14px; opacity: 0.95; }
   .searchWrap { max-width: 480px; margin: 18px auto 0; padding: 0 12px; }
@@ -160,6 +175,16 @@
   <div id="detailContent"></div>
 </div>
 
+<div id="aboutModal">
+  <div id="aboutPanel">
+    <button id="aboutClose" aria-label="Close">✕</button>
+    <h2>About TT Discover</h2>
+    <p>TT Discover is a home-grown platform for finding local businesses, services, deals, and events all across Trinidad &amp; Tobago.</p>
+    <p>Our goal is simple: help people discover what's good nearby, and give small businesses easy tools to reach more customers and grow their online presence — without needing a big budget or technical know-how.</p>
+    <p>Whether you're browsing for your next meal, following updates on new spots opening near you, or listing your own business, TT Discover is built for the local community, by the local community.</p>
+  </div>
+</div>
+
 <script>
 let allBusinesses = [];
 
@@ -199,10 +224,10 @@ document.getElementById('accountBtn').addEventListener('click', async (e) => {
 
   const status = await checkSignInStatus();
   if (!status.signedIn){
-    dd.innerHTML = `<div class="ddRow">Not signed in</div><a href="/account.html">Sign In / Sign Up</a>`;
+    dd.innerHTML = `<div class="ddRow">Not signed in</div><a href="/account.html">Sign In / Sign Up</a><button id="ddAbout">About Us</button>`;
   } else {
     dd.innerHTML = `<div class="ddRow">Signed in as<br><b>${status.email}</b></div>
-      <a href="/account.html">My Account</a>
+      <button id="ddAbout">About Us</button>
       <button id="ddLogout">Log Out</button>`;
     document.getElementById('ddLogout').addEventListener('click', () => {
       localStorage.removeItem('ttp_token');
@@ -210,9 +235,16 @@ document.getElementById('accountBtn').addEventListener('click', async (e) => {
       dd.style.display = 'none';
     });
   }
+  document.getElementById('ddAbout').addEventListener('click', () => {
+    dd.style.display = 'none';
+    document.getElementById('aboutModal').classList.add('open');
+  });
   dd.style.display = 'block';
 });
 window.addEventListener('click', () => { document.getElementById('accountDropdown').style.display = 'none'; });
+document.getElementById('aboutClose').addEventListener('click', () => {
+  document.getElementById('aboutModal').classList.remove('open');
+});
 
 const DAY_LABELS_LIST = [
   { key: 'mon', label: 'Mon' }, { key: 'tue', label: 'Tue' }, { key: 'wed', label: 'Wed' },
@@ -336,13 +368,37 @@ function renderDetailTabs(biz, activeTab){
       ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
     `;
   } else if (activeTab === 'menu'){
-    const photos = biz.menuPhotos || [];
-    panelHtml = photos.length
-      ? `<div class="menuPhotoGrid">${photos.map(u => `<img src="${u}">`).join('')}</div>`
-      : `<div class="emptyState">This business hasn't added their menu yet.</div>`;
+    const menuPhotos = biz.menuPhotos || [];
+    const highlights = biz.highlights || [];
+    panelHtml = `
+      <h3 style="font-size:14px;margin-bottom:8px;">🍽️ Menu</h3>
+      ${menuPhotos.length
+        ? `<div class="menuPhotoGrid">${menuPhotos.map(u => `<img src="${u}">`).join('')}</div>`
+        : `<div class="emptyState">This business hasn't added their menu yet.</div>`}
+      <h3 style="font-size:14px;margin:18px 0 8px;">✨ Highlights</h3>
+      ${highlights.length
+        ? `<div class="menuPhotoGrid">${highlights.map(u => `<img src="${u}">`).join('')}</div>`
+        : `<div class="emptyState">No highlight photos yet.</div>`}
+    `;
   } else if (activeTab === 'review'){
     panelHtml = `<div class="emptyState">No reviews yet — reviews are coming soon!</div>`;
   } else if (activeTab === 'about'){
+    const about = biz.about || {};
+    const social = biz.social || {};
+    const ABOUT_LABELS = {
+      accessibility: 'Accessibility', serviceOptions: 'Service Options', popularFor: 'Popular For',
+      offerings: 'Offerings', diningOptions: 'Dining Options', atmosphere: 'Atmosphere',
+      crowd: 'Crowd', payments: 'Payments', children: 'Children', parking: 'Parking'
+    };
+    const aboutRows = Object.keys(ABOUT_LABELS)
+      .filter(k => about[k])
+      .map(k => `<div class="row"><b>${ABOUT_LABELS[k]}:</b> ${escapeHtml(about[k])}</div>`)
+      .join('');
+    const socialLinks = [
+      social.facebook ? `<a href="${escapeHtml(social.facebook)}" target="_blank" rel="noopener">Facebook</a>` : '',
+      social.instagram ? `<a href="${escapeHtml(social.instagram)}" target="_blank" rel="noopener">Instagram</a>` : '',
+      social.website ? `<a href="${escapeHtml(social.website)}" target="_blank" rel="noopener">Website</a>` : ''
+    ].filter(Boolean).join(' · ');
     panelHtml = `
       <h2>${escapeHtml(biz.name)}</h2>
       <div class="desc">${escapeHtml(biz.description)}</div>
@@ -351,6 +407,8 @@ function renderDetailTabs(biz, activeTab){
       ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
       <div class="row"><b>Category:</b> ${escapeHtml(biz.category)}</div>
       <div class="row"><b>Area:</b> ${escapeHtml(biz.area)}</div>
+      ${socialLinks ? `<div class="row" style="margin-top:10px;"><b>Find us:</b> ${socialLinks}</div>` : ''}
+      ${aboutRows ? `<div style="margin-top:14px;border-top:1px solid #eee;padding-top:10px;">${aboutRows}</div>` : ''}
     `;
   }
 
