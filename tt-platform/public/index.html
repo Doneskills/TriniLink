@@ -120,6 +120,10 @@
   #detailContent .row b { color: #555; }
   .overviewPhoto { margin: 14px 0; }
   .overviewPhoto img { width: 100%; border-radius: 10px; display: block; }
+  .logoThumb {
+    width: 56px; height: 56px; border-radius: 12px; object-fit: cover;
+    display: block; margin-bottom: 8px; border: 1px solid #eee;
+  }
   .detailTabRow {
     display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #eee;
     position: sticky; top: 0; background: #fdf6ec; z-index: 1;
@@ -190,7 +194,7 @@ let allBusinesses = [];
 
 // ---------------- Nav buttons ----------------
 document.getElementById('addBtn').addEventListener('click', () => {
-  window.location.href = '/account.html';
+  window.open('/account.html', '_blank');
 });
 
 async function checkSignInStatus(){
@@ -358,6 +362,7 @@ function renderDetailTabs(biz, activeTab){
   let panelHtml = '';
   if (activeTab === 'overview'){
     panelHtml = `
+      ${biz.logoUrl ? `<img src="${biz.logoUrl}" class="logoThumb">` : ''}
       <h2>${escapeHtml(biz.name)}</h2>
       <div class="meta">${escapeHtml(biz.category)} · ${escapeHtml(biz.area)}</div>
       ${biz.hiring ? '<div class="hiringBadge">📢 Hiring Now</div>' : ''}
@@ -404,6 +409,7 @@ function renderDetailTabs(biz, activeTab){
       <div class="desc">${escapeHtml(biz.description)}</div>
       ${biz.address ? `<div class="row"><b>Address:</b> ${escapeHtml(biz.address)}</div>` : ''}
       ${biz.phone ? `<div class="row"><b>Phone:</b> ${escapeHtml(biz.phone)}</div>` : ''}
+      ${biz.email ? `<div class="row"><b>Email:</b> ${escapeHtml(biz.email)}</div>` : ''}
       ${biz.hours ? `<div class="row"><b>Hours:</b> ${escapeHtml(formatHours(biz.hours))}</div>` : ''}
       <div class="row"><b>Category:</b> ${escapeHtml(biz.category)}</div>
       <div class="row"><b>Area:</b> ${escapeHtml(biz.area)}</div>

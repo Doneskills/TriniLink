@@ -493,10 +493,12 @@ app.post('/api/my/businesses', requireUser, requireBusinessAccount, async (req, 
       ownerId: req.user._id.toString(),
       name: String(b.name || '').slice(0, 100),
       category: String(b.category || 'Food').slice(0, 40),
+      logoUrl: String(b.logoUrl || '').slice(0, 400000),
       area: String(b.area || 'Port of Spain').slice(0, 60),
       description: String(b.description || '').slice(0, 500),
       address: String(b.address || '').slice(0, 200),
       phone: String(b.phone || '').slice(0, 40),
+      email: String(b.email || '').slice(0, 150),
       hours: sanitizeHours(b.hours),
       imageUrl: String(b.imageUrl || '').slice(0, 400000),
       photos: sanitizePhotoArray(b.photos),
@@ -543,9 +545,12 @@ app.put('/api/my/businesses/:id', requireUser, requireBusinessAccount, async (re
     if (b.category) update.category = String(b.category).slice(0, 40);
     if (Array.isArray(b.photos)) update.photos = sanitizePhotoArray(b.photos);
     if (Array.isArray(b.menuPhotos)) update.menuPhotos = sanitizePhotoArray(b.menuPhotos);
+    if (Array.isArray(b.highlights)) update.highlights = sanitizePhotoArray(b.highlights);
     if (typeof b.hiring === 'boolean') update.hiring = b.hiring;
     if (b.about) update.about = sanitizeAbout(b.about);
     if (b.social) update.social = sanitizeSocial(b.social);
+    if (typeof b.logoUrl === 'string') update.logoUrl = b.logoUrl.slice(0, 400000);
+    if (typeof b.email === 'string') update.email = b.email.slice(0, 150);
     await businessesCol.updateOne({ _id: biz._id }, { $set: update });
     res.json({ ok: true });
   } catch (err) {
