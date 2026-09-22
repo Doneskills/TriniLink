@@ -175,13 +175,6 @@
         </div>
 
         <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">⭐ Star Rating</div><div class="accPreview">No ratings yet</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
-            <p class="accNote">Your rating fills in automatically once customers start leaving reviews — there's nothing to fill in here.</p>
-          </div>
-        </div>
-
-        <div class="accRow">
           <div class="accRowHeader"><div><div class="accLabel">Business Category</div><div class="accPreview">e.g. Restaurant, Salon, Auto Repair</div></div><span class="accChevron">›</span></div>
           <div class="accRowBody">
             <input type="text" id="bCategory" placeholder="e.g. Restaurant, Salon, Auto Repair">
@@ -213,13 +206,6 @@
             <div id="highlightsUploadBtn" class="menuUploadBtn">✨ Click to add highlight photo(s)</div>
             <input type="file" id="highlightsFileInput" accept="image/*" multiple style="display:none;">
             <div id="highlightsPreviewGrid"></div>
-          </div>
-        </div>
-
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">💬 Review</div><div class="accPreview">No reviews yet</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
-            <p class="accNote">Customer reviews will show up here once your business is live — nothing to fill in for this section.</p>
           </div>
         </div>
 
@@ -280,13 +266,6 @@
             <input type="text" id="bSocialInstagram" placeholder="https://instagram.com/...">
             <label>Website / Other</label>
             <input type="text" id="bSocialWebsite" placeholder="https://...">
-          </div>
-        </div>
-
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Hiring</div><div class="accPreview">Off</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
-            <button type="button" id="bHiringBtn" class="hiringBtn">📢 Not Hiring</button>
           </div>
         </div>
 
@@ -589,14 +568,6 @@ function resetHighlights(){
 }
 
 // ---------------- Hiring toggle (create form) ----------------
-let createHiringVal = false;
-document.getElementById('bHiringBtn').addEventListener('click', (e) => {
-  createHiringVal = !createHiringVal;
-  e.target.className = 'hiringBtn' + (createHiringVal ? ' on' : '');
-  e.target.textContent = createHiringVal ? '✅ Hiring Now' : '📢 Not Hiring';
-  e.target.closest('.accRow').querySelector('.accPreview').textContent = createHiringVal ? 'On' : 'Off';
-});
-
 // ---------------- Accordion toggle (Create Your Business sections) ----------------
 document.querySelectorAll('#mainView .accRowHeader').forEach(header => {
   header.addEventListener('click', () => {
@@ -701,7 +672,6 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     photos: photosState,
     menuPhotos: menuPhotosState,
     highlights: highlightsState,
-    hiring: createHiringVal,
     about: {
       accessibility: document.getElementById('aboutAccessibility').value,
       serviceOptions: document.getElementById('aboutServiceOptions').value,
@@ -739,11 +709,6 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
       resetHoursPicker();
       resetMenuPhotos();
       resetHighlights();
-      createHiringVal = false;
-      const hiringBtn = document.getElementById('bHiringBtn');
-      hiringBtn.className = 'hiringBtn';
-      hiringBtn.textContent = '📢 Not Hiring';
-      hiringBtn.closest('.accRow').querySelector('.accPreview').textContent = 'Off';
       maybeShowPremiumPopupAfterGoLive();
     } else {
       document.getElementById('addMsg').textContent = data.error || 'Could not add business.';
