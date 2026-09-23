@@ -353,7 +353,7 @@ function openDetail(id){
 
 function renderDetailTabs(biz, activeTab){
   const deals = activeDeals(biz);
-  const tabs = ['Overview', 'Menu', 'Review', 'About'];
+  const tabs = ['Overview', 'Posts', 'Menu', 'Review', 'About'];
   const tabsHtml = tabs.map(t => {
     const key = t.toLowerCase();
     return `<button class="detailTabBtn ${key === activeTab ? 'active' : ''}" data-tab="${key}">${t}</button>`;
@@ -372,6 +372,18 @@ function renderDetailTabs(biz, activeTab){
       <div class="row"><b>Rating:</b> ⭐ No ratings yet</div>
       ${deals.map(d => `<div class="dealBadge" style="margin-top:10px;display:block;width:fit-content;">🔥 ${escapeHtml(d.title)}</div><div class="desc">${escapeHtml(d.description)}</div>`).join('')}
     `;
+  } else if (activeTab === 'posts'){
+    const posts = biz.posts || [];
+    panelHtml = posts.length
+      ? posts.map(p => `
+          <div style="border-bottom:1px solid #eee;padding:12px 0;">
+            <b style="font-size:14px;">${escapeHtml(p.title)}</b>
+            <div style="font-size:12px;color:#999;margin-bottom:6px;">${new Date(p.createdAt).toLocaleDateString()}</div>
+            ${p.content ? `<div class="desc">${escapeHtml(p.content)}</div>` : ''}
+            ${p.imageUrl ? `<div class="overviewPhoto"><img src="${p.imageUrl}"></div>` : ''}
+          </div>
+        `).join('')
+      : `<div class="emptyState">No posts yet — check back soon!</div>`;
   } else if (activeTab === 'menu'){
     const menuPhotos = biz.menuPhotos || [];
     const highlights = biz.highlights || [];

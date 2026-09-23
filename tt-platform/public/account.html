@@ -164,6 +164,10 @@
   <div id="mainView" style="display:none;">
     <div class="card">
       <p style="font-size:12px;color:#999;margin-bottom:12px;">Signed in as <b id="meEmail"></b> · <a href="#" id="logoutBtn" style="color:#e0562f;text-decoration:none;font-weight:600;">Log Out</a></p>
+      <h2>Your Businesses</h2>
+      <div id="myListings"><p style="color:#999;font-size:13px;">Loading...</p></div>
+    </div>
+    <div class="card">
       <h2>Create Your Business</h2>
       <div class="accList">
 
@@ -775,6 +779,7 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
       resetMenuPhotos();
       resetHighlights();
       resetLogo();
+      loadMyListings();
       maybeShowPremiumPopupAfterGoLive();
     } else {
       document.getElementById('addMsg').textContent = data.error || 'Could not add business.';
@@ -968,33 +973,30 @@ async function loadMyListings(){
   if (!res.ok) return;
   const list = await res.json();
   const box = document.getElementById('myListings');
-  box.innerHTML = list.length ? '' : '<p style="color:#999;font-size:13px;">You haven\'t added any listings yet.</p>';
+  box.innerHTML = list.length ? '' : '<p style="color:#999;font-size:13px;">You haven\'t created any businesses yet.</p>';
   list.forEach(biz => {
     const row = document.createElement('div');
     row.className = 'listingRow';
-    row.innerHTML = `<span>${biz.name}</span>`;
+    row.innerHTML = `<span>${escapeHtml(biz.name)}</span>`;
     const viewLink = document.createElement('a');
     viewLink.href = '/biz/' + biz._id;
     viewLink.target = '_blank';
     viewLink.textContent = '🔗 View Page';
     viewLink.style.cssText = 'font-size:12px;color:#e0562f;text-decoration:none;margin-right:10px;';
-    const editBtn = document.createElement('button');
-    editBtn.className = 'secondary';
-    editBtn.style.cssText = 'width:auto;padding:6px 12px;font-size:12px;margin:0;';
-    editBtn.textContent = 'Edit';
-    const editPanel = document.createElement('div');
-    editPanel.style.cssText = 'width:100%;display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e8dcc8;';
-    editBtn.addEventListener('click', () => {
-      if (editPanel.style.display === 'none'){
-        if (!editPanel.dataset.built){
-          buildEditPanel(editPanel, biz);
-          editPanel.dataset.built = '1';
-        }
-        editPanel.style.display = 'block';
-        editBtn.textContent = 'Close';
+    const postsBtn = document.createElement('button');
+    postsBtn.className = 'secondary';
+    postsBtn.style.cssText = 'width:auto;padding:6px 12px;font-size:12px;margin:0;';
+    postsBtn.textContent = '📢 Posts';
+    const postsPanel = document.createElement('div');
+    postsPanel.style.cssText = 'width:100%;display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e8dcc8;';
+    postsBtn.addEventListener('click', () => {
+      if (postsPanel.style.display === 'none'){
+        buildPostsPanel(postsPanel, biz);
+        postsPanel.style.display = 'block';
+        postsBtn.textContent = 'Close';
       } else {
-        editPanel.style.display = 'none';
-        editBtn.textContent = 'Edit';
+        postsPanel.style.display = 'none';
+        postsBtn.textContent = '📢 Posts';
       }
     });
     const delBtn = document.createElement('button');
@@ -1005,10 +1007,82 @@ async function loadMyListings(){
       loadMyListings();
     });
     row.appendChild(viewLink);
-    row.appendChild(editBtn);
+    row.appendChild(postsBtn);
     row.appendChild(delBtn);
-    row.appendChild(editPanel);
+    row.appendChild(postsPanel);
     box.appendChild(row);
+  });
+}
+
+function buildPostsPanel(container, biz){
+  container.innerHTML = `
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">New Post Title</label>
+    <input type="text" id="postTitle_${biz._id}" placeholder="e.g. Now open on Sundays!">
+    <label style="display:block;font-size:11px;text-transform:uppercase;color:#999;margin:8px 0 4px;">Content</label>
+    <textarea id="postContent_${biz._id}" placeholder="Tell people what's new..."></textarea>
+    <div id="postImageWrap_${biz._id}"></div>
+    <button id="postPublishBtn_${biz._id}" style="margin-top:10px;">Publish Post</button>
+    <div class="msg" id="postMsg_${biz._id}"></div>
+    <div id="postList_${biz._id}" style="margin-top:16px;"></div>
+  `;
+  const imgCtrl = createEditPhotoPicker(document.getElementById('postImageWrap_' + biz._id), [], '🖼️ Add a photo (optional)');
+  document.getElementById('postPublishBtn_' + biz._id).addEventListener('click', async () => {
+    const msg = document.getElementById('postMsg_' + biz._id);
+    const title = document.getElementById('postTitle_' + biz._id).value;
+    if (!title.trim()){ msg.textContent = 'A title is required.'; return; }
+    msg.textContent = 'Posting...';
+    try {
+      const res = await fetch('/api/my/businesses/' + biz._id + '/posts', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({
+          title,
+          content: document.getElementById('postContent_' + biz._id).value,
+          imageUrl: imgCtrl.getPhotos()[0] || ''
+        })
+      });
+      const data = await res.json();
+      if (res.ok){
+        biz.posts = biz.posts || [];
+        biz.posts.unshift(data.post);
+        msg.textContent = 'Posted!';
+        document.getElementById('postTitle_' + biz._id).value = '';
+        document.getElementById('postContent_' + biz._id).value = '';
+        renderPostList(biz);
+      } else {
+        msg.textContent = data.error || 'Could not create post.';
+      }
+    } catch (err) {
+      msg.textContent = 'Something went wrong — please try again.';
+    }
+  });
+  renderPostList(biz);
+}
+
+function renderPostList(biz){
+  const listBox = document.getElementById('postList_' + biz._id);
+  const posts = biz.posts || [];
+  if (!posts.length){
+    listBox.innerHTML = '<p style="color:#999;font-size:13px;">No posts yet.</p>';
+    return;
+  }
+  listBox.innerHTML = posts.map(p => `
+    <div style="border-top:1px solid #f0e4d0;padding:10px 0;">
+      <b style="font-size:13px;">${escapeHtml(p.title)}</b>
+      <div style="font-size:12px;color:#999;">${new Date(p.createdAt).toLocaleDateString()}</div>
+      ${p.content ? `<p style="font-size:13px;margin:6px 0;">${escapeHtml(p.content)}</p>` : ''}
+      ${p.imageUrl ? `<img src="${p.imageUrl}" style="max-width:120px;border-radius:8px;display:block;margin:6px 0;">` : ''}
+      <button class="danger" data-post-id="${p._id}" style="padding:5px 10px;font-size:11px;">Delete</button>
+    </div>
+  `).join('');
+  listBox.querySelectorAll('button[data-post-id]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await fetch('/api/my/businesses/' + biz._id + '/posts/' + btn.dataset.postId, {
+        method: 'DELETE', headers: { 'x-auth-token': token }
+      });
+      biz.posts = (biz.posts || []).filter(p => p._id !== btn.dataset.postId);
+      renderPostList(biz);
+    });
   });
 }
 
@@ -1031,6 +1105,7 @@ async function enterApp(){
 
   document.getElementById('meEmail').textContent = data.email;
   showView('main');
+  loadMyListings();
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('premium') === 'success'){

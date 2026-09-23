@@ -508,6 +508,7 @@ app.post('/api/my/businesses', requireUser, requireBusinessAccount, async (req, 
       hiring: !!b.hiring,
       featured: false,
       deals: [],
+      posts: [],
       createdAt: new Date()
     };
     if (!doc.name.trim()) return res.status(400).json({ error: 'Business name is required.' });
@@ -584,6 +585,44 @@ app.patch('/api/my/businesses/:id/hiring', requireUser, requireBusinessAccount, 
     res.json({ ok: true, hiring });
   } catch (err) {
     res.status(500).json({ error: 'Could not update hiring status.' });
+  }
+});
+
+app.post('/api/my/businesses/:id/posts', requireUser, requireBusinessAccount, async (req, res) => {
+  if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
+  try {
+    const biz = await businessesCol.findOne({ _id: new ObjectId(req.params.id) });
+    if (!biz || biz.ownerId !== req.user._id.toString()){
+      return res.status(403).json({ error: 'You can only post to your own listing.' });
+    }
+    const b = req.body || {};
+    const title = String(b.title || '').trim().slice(0, 100);
+    if (!title) return res.status(400).json({ error: 'A post title is required.' });
+    const post = {
+      _id: new ObjectId(),
+      title,
+      content: String(b.content || '').slice(0, 1000),
+      imageUrl: String(b.imageUrl || '').slice(0, 400000),
+      createdAt: new Date()
+    };
+    await businessesCol.updateOne({ _id: biz._id }, { $push: { posts: { $each: [post], $position: 0 } } });
+    res.json({ ok: true, post });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not create post.' });
+  }
+});
+
+app.delete('/api/my/businesses/:id/posts/:postId', requireUser, requireBusinessAccount, async (req, res) => {
+  if (!businessesCol) return res.status(503).json({ error: 'Database not connected' });
+  try {
+    const biz = await businessesCol.findOne({ _id: new ObjectId(req.params.id) });
+    if (!biz || biz.ownerId !== req.user._id.toString()){
+      return res.status(403).json({ error: 'You can only edit your own listing.' });
+    }
+    await businessesCol.updateOne({ _id: biz._id }, { $pull: { posts: { _id: new ObjectId(req.params.postId) } } });
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: 'Could not delete post.' });
   }
 });
 
