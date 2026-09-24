@@ -5,9 +5,25 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>My Account — TT Discover</title>
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script>
+  (function(){
+    var saved = localStorage.getItem('tt_theme');
+    if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+</script>
 <style>
+  :root {
+    --bg: #fdf6ec; --text: #2a2a2a; --text-muted: #999; --text-muted3: #777;
+    --card-bg: #ffffff; --border: #eee; --input-bg: #fdf6ec; --input-border: #e8dcc8;
+    --soft-bg: #f0e4d0; --soft-bg-hover: #e8dcc8;
+  }
+  [data-theme="dark"] {
+    --bg: #16181d; --text: #e8e6e3; --text-muted: #999; --text-muted3: #a9a9a9;
+    --card-bg: #22252b; --border: #33363d; --input-bg: #2a2d34; --input-border: #3a3d45;
+    --soft-bg: #33363d; --soft-bg-hover: #3a3d45;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Segoe UI', system-ui, sans-serif; background: #fdf6ec; color: #2a2a2a; }
+  body { font-family: 'Segoe UI', system-ui, sans-serif; background: var(--bg); color: var(--text); }
   header {
     background: linear-gradient(135deg, #e0562f, #f2a33c); color: #fff;
     padding: 18px 20px; display: flex; justify-content: space-between; align-items: center;
@@ -16,85 +32,85 @@
   header h1 { font-size: 18px; }
   .wrap { max-width: 480px; margin: 0 auto; padding: 24px 16px 60px; }
   .card {
-    background: #fff; border-radius: 12px; padding: 20px; margin-bottom: 18px;
+    background: var(--card-bg); border-radius: 12px; padding: 20px; margin-bottom: 18px;
     box-shadow: 0 2px 8px rgba(0,0,0,0.06);
   }
   h2 { font-size: 17px; margin-bottom: 12px; }
-  label { display: block; font-size: 12px; text-transform: uppercase; color: #999; margin: 12px 0 5px; }
+  label { display: block; font-size: 12px; text-transform: uppercase; color: var(--text-muted); margin: 12px 0 5px; }
   input, textarea, select {
-    width: 100%; padding: 9px 10px; background: #fdf6ec; border: 1px solid #e8dcc8;
-    border-radius: 6px; color: #2a2a2a; font-size: 14px;
+    width: 100%; padding: 9px 10px; background: var(--input-bg); border: 1px solid var(--input-border);
+    border-radius: 6px; color: var(--text); font-size: 14px;
   }
   textarea { resize: vertical; min-height: 60px; }
   button {
     margin-top: 14px; width: 100%; padding: 10px; background: #e0562f; color: #fff;
     border: none; border-radius: 6px; font-weight: 700; cursor: pointer;
   }
-  button.secondary { background: #f0e4d0; color: #2a2a2a; }
+  button.secondary { background: var(--soft-bg); color: var(--text); }
   button.danger { background: #c94a3a; width: auto; padding: 6px 12px; font-size: 12px; }
   .msg { margin-top: 10px; font-size: 13px; color: #e0562f; min-height: 16px; }
   .tabRow { display: flex; gap: 8px; margin-bottom: 14px; }
-  .tabRow button { margin-top: 0; flex: 1; background: #f0e4d0; color: #2a2a2a; }
+  .tabRow button { margin-top: 0; flex: 1; background: var(--soft-bg); color: var(--text); }
   .tabRow button.active { background: #e0562f; color: #fff; }
   #app > div { display: none; }
-  hr { border: none; border-top: 1px solid #eee; margin: 18px 0; }
+  hr { border: none; border-top: 1px solid var(--border); margin: 18px 0; }
   .listingRow {
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
-    padding: 10px 0; border-bottom: 1px solid #eee; font-size: 14px;
+    padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
   }
   .planBadge {
-    display: inline-block; background: #f0e4d0; color: #7a5c30; padding: 4px 10px;
+    display: inline-block; background: var(--soft-bg); color: #7a5c30; padding: 4px 10px;
     border-radius: 20px; font-size: 12px; font-weight: 700;
   }
   .hiringBtn {
-    font-size: 11px; padding: 5px 10px; border-radius: 20px; border: 1px solid #e8dcc8;
-    background: #fff; color: #999; cursor: pointer; margin-right: 8px; white-space: nowrap;
+    font-size: 11px; padding: 5px 10px; border-radius: 20px; border: 1px solid var(--input-border);
+    background: var(--card-bg); color: var(--text-muted); cursor: pointer; margin-right: 8px; white-space: nowrap;
   }
   .hiringBtn.on { background: #2e7d32; color: #fff; border-color: #2e7d32; }
-  .accList { border: 1px solid #e8dcc8; border-radius: 10px; overflow: hidden; }
-  .accRow { border-bottom: 1px solid #f0e4d0; }
+  .accList { border: 1px solid var(--input-border); border-radius: 10px; overflow: hidden; }
+  .accRow { border-bottom: 1px solid var(--soft-bg); }
   .accRow:last-child { border-bottom: none; }
   .accRowHeader {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 14px 16px; cursor: pointer; background: #fff;
+    padding: 14px 16px; cursor: pointer; background: var(--card-bg);
   }
-  .accRowHeader .accLabel { font-size: 14px; font-weight: 700; color: #2a2a2a; }
-  .accRowHeader .accPreview { font-size: 12px; color: #999; margin-top: 2px; }
-  .accRowHeader .accChevron { color: #ccc; font-size: 16px; transition: transform 0.2s; flex-shrink: 0; margin-left: 10px; }
+  .accRowHeader .accLabel { font-size: 14px; font-weight: 700; color: var(--text); }
+  .accRowHeader .accPreview { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+  .accRowHeader .accChevron { color: var(--text-muted); font-size: 16px; transition: transform 0.2s; flex-shrink: 0; margin-left: 10px; }
   .accRow.open .accChevron { transform: rotate(90deg); }
-  .accRowBody { display: none; padding: 0 16px 16px; background: #fdf6ec; }
+  .accRowBody { display: none; padding: 0 16px 16px; background: var(--input-bg); }
   .accRow.open .accRowBody { display: block; padding-top: 4px; }
-  .accRowBody label { font-size: 11px; text-transform: uppercase; color: #999; margin: 10px 0 4px; display: block; }
+  .accRowBody label { font-size: 11px; text-transform: uppercase; color: var(--text-muted); margin: 10px 0 4px; display: block; }
   .accRowBody label:first-child { margin-top: 4px; }
-  .accNote { font-size: 13px; line-height: 1.5; color: #777; margin: 4px 0; }
-  .premiumNote { color: #999; font-size: 13px; margin-top: 10px; line-height: 1.5; }
+  .accNote { font-size: 13px; line-height: 1.5; color: var(--text-muted3); margin: 4px 0; }
+  .premiumNote { color: var(--text-muted); font-size: 13px; margin-top: 10px; line-height: 1.5; }
   .hoursSummary {
-    padding: 9px 10px; background: #fdf6ec; border: 1px solid #e8dcc8;
-    border-radius: 6px; font-size: 14px; cursor: pointer; color: #2a2a2a;
+    padding: 9px 10px; background: var(--input-bg); border: 1px solid var(--input-border);
+    border-radius: 6px; font-size: 14px; cursor: pointer; color: var(--text);
   }
   .hoursSummary:after { content: ' ✎'; color: #e0562f; }
   .hoursEditor {
-    margin-top: 8px; border: 1px solid #e8dcc8; border-radius: 8px; padding: 8px 10px;
+    margin-top: 8px; border: 1px solid var(--input-border); border-radius: 8px; padding: 8px 10px;
   }
   .hoursDayRow {
     display: flex; align-items: center; gap: 6px; padding: 6px 0;
-    border-bottom: 1px solid #f0e4d0; font-size: 13px;
+    border-bottom: 1px solid var(--soft-bg); font-size: 13px;
   }
   .hoursDayRow:last-child { border-bottom: none; }
-  .hoursDayRow .dayLabel { width: 34px; font-weight: 700; color: #555; flex-shrink: 0; }
+  .hoursDayRow .dayLabel { width: 34px; font-weight: 700; color: var(--text); flex-shrink: 0; }
   .hoursDayRow input[type="time"] {
     flex: 1; padding: 5px 4px; font-size: 12px; min-width: 0;
   }
-  .hoursDayRow .toLabel { color: #bbb; flex-shrink: 0; }
+  .hoursDayRow .toLabel { color: var(--text-muted); flex-shrink: 0; }
   .hoursDayRow .closedLabel {
-    display: flex; align-items: center; gap: 4px; font-size: 11px; color: #999;
+    display: flex; align-items: center; gap: 4px; font-size: 11px; color: var(--text-muted);
     text-transform: none; margin: 0; white-space: nowrap; flex-shrink: 0;
   }
   .menuUploadBtn {
-    display: inline-block; padding: 9px 14px; background: #f0e4d0; color: #2a2a2a;
+    display: inline-block; padding: 9px 14px; background: var(--soft-bg); color: var(--text);
     border-radius: 6px; font-size: 13px; cursor: pointer; text-align: center;
   }
-  .menuUploadBtn:hover { background: #e8dcc8; }
+  .menuUploadBtn:hover { background: var(--soft-bg-hover); }
   #menuPreviewGrid { display: flex; flex-wrap: wrap; margin-top: 4px; }
   .menuPhotoPreview { position: relative; margin: 4px 4px 0 0; }
   .menuPhotoPreview img {
@@ -111,22 +127,70 @@
   }
   #premiumPopup.open { display: flex; }
   #premiumPopupPanel {
-    background: #fff; border-radius: 14px; padding: 24px 20px; max-width: 420px; width: 100%;
+    background: var(--card-bg); border-radius: 14px; padding: 24px 20px; max-width: 420px; width: 100%;
     max-height: 85vh; overflow-y: auto; position: relative;
   }
   #premiumPopupClose {
     position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%;
-    border: none; background: #f0e4d0; color: #2a2a2a; font-size: 16px; cursor: pointer;
+    border: none; background: var(--soft-bg); color: var(--text); font-size: 16px; cursor: pointer;
   }
   #premiumPopupPanel h2 { font-size: 19px; margin-bottom: 10px; padding-right: 30px; }
+
+  /* ---------------- TT Discover Studio shell ---------------- */
+  #studioTopBar {
+    display: flex; align-items: center; justify-content: flex-end; gap: 14px;
+    padding: 10px 16px; background: var(--card-bg); border-bottom: 1px solid var(--input-border);
+  }
+  .studioTopIcons { display: flex; gap: 14px; margin-right: auto; }
+  .studioTopIcon { font-size: 17px; opacity: 0.6; cursor: default; }
+  .studioTopIcon.clickable { cursor: pointer; opacity: 0.85; }
+  .studioAvatar, .studioAvatarBig {
+    border-radius: 50%; background: #e0562f; color: #fff; font-weight: 700;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .studioAvatar { width: 32px; height: 32px; font-size: 13px; }
+  .studioAvatarBig { width: 64px; height: 64px; font-size: 24px; margin: 0 auto 8px; }
+  #studioBody { display: flex; align-items: flex-start; }
+  #studioSidebar {
+    width: 190px; flex-shrink: 0; background: var(--card-bg); border-right: 1px solid var(--input-border);
+    min-height: 70vh; padding: 20px 0;
+  }
+  .studioProfile { text-align: center; padding: 0 12px 16px; border-bottom: 1px solid var(--soft-bg); margin-bottom: 8px; }
+  .studioProfileName { font-weight: 700; font-size: 14px; }
+  .studioProfileEmail { font-size: 11px; color: var(--text-muted); word-break: break-all; margin-top: 2px; }
+  #studioNav { display: flex; flex-direction: column; }
+  .studioNavItem {
+    display: block; width: 100%; text-align: left; background: none; border: none;
+    padding: 11px 16px; font-size: 13px; font-weight: 600; color: var(--text-muted3); cursor: pointer;
+    margin: 0; border-radius: 0;
+  }
+  .studioNavItem.active { background: var(--soft-bg); color: #e0562f; }
+  .studioSidebarFooterLink {
+    display: block; text-align: center; margin-top: 16px; font-size: 12px;
+    color: var(--text-muted); text-decoration: none; padding-top: 12px; border-top: 1px solid var(--soft-bg);
+  }
+  #studioMain { flex: 1; padding: 20px; min-width: 0; }
+  #studioMain h2 { font-size: 19px; margin-bottom: 12px; }
+  .studioField { display: none; }
+  .studioField.active { display: block; }
+  @media (max-width: 640px) {
+    #studioBody { flex-direction: column; }
+    #studioSidebar { width: 100%; min-height: auto; border-right: none; border-bottom: 1px solid var(--input-border); }
+    #studioNav { flex-direction: row; flex-wrap: wrap; justify-content: center; gap: 4px; padding: 0 8px; }
+    .studioNavItem { width: auto; border-radius: 20px; padding: 7px 12px; }
+  }
 </style>
 </head>
 <body>
 
 <header>
   <h1>🇹🇹 My Account</h1>
-  <a href="/">← Back to site</a>
+  <div style="display:flex;align-items:center;gap:14px;">
+    <span id="themeToggleBtn" title="Toggle dark mode" style="cursor:pointer;font-size:18px;">🌙</span>
+    <a href="/">← Back to site</a>
+  </div>
 </header>
+
 
 <div class="wrap" id="app">
 
@@ -162,41 +226,54 @@
   </div>
 
   <div id="mainView" style="display:none;">
-    <div class="card">
-      <p style="font-size:12px;color:#999;margin-bottom:12px;">Signed in as <b id="meEmail"></b> · <a href="#" id="logoutBtn" style="color:#e0562f;text-decoration:none;font-weight:600;">Log Out</a></p>
-      <h2>Your Businesses</h2>
-      <div id="myListings"><p style="color:#999;font-size:13px;">Loading...</p></div>
+    <div id="studioTopBar">
+      <div class="studioTopIcons">
+        <span class="studioTopIcon" title="Search">🔍</span>
+        <span class="studioTopIcon" title="Help">❓</span>
+        <span class="studioTopIcon" title="Notifications">🔔</span>
+      </div>
+      <button id="studioListingsBtn" class="secondary" style="width:auto;padding:8px 14px;font-size:13px;margin:0;">📋 Your Businesses</button>
+      <div class="studioAvatar" id="studioTopAvatar"></div>
     </div>
-    <div class="card">
-      <h2>Create Your Business</h2>
-      <div class="accList">
 
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Business Name</div><div class="accPreview">Required</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+    <div id="studioBody">
+      <div id="studioSidebar">
+        <div class="studioProfile">
+          <div class="studioAvatarBig" id="studioAvatarBig"></div>
+          <div class="studioProfileName">Your Business</div>
+          <div class="studioProfileEmail" id="meEmail"></div>
+        </div>
+        <nav id="studioNav">
+          <button type="button" class="studioNavItem" data-group="namecat">Business Name</button>
+          <button type="button" class="studioNavItem" data-group="logomenu">Logo</button>
+          <button type="button" class="studioNavItem" data-group="about">About</button>
+          <button type="button" class="studioNavItem" data-group="locationinfo">Location</button>
+          <button type="button" class="studioNavItem" data-group="social">Social Media Links</button>
+        </nav>
+        <a href="#" id="logoutBtn" class="studioSidebarFooterLink">Log Out</a>
+      </div>
+
+      <div id="studioMain">
+        <h2>Create Your Business</h2>
+        <div id="studioSubTabs" class="tabRow" style="display:none;"></div>
+
+        <div id="studioFields">
+          <div class="studioField" data-group="namecat" data-field="name">
+            <label>Business Name</label>
             <input type="text" id="bName" placeholder="e.g. Casali's Pizza Cafe">
           </div>
-        </div>
-
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Business Category</div><div class="accPreview">e.g. Restaurant, Salon, Auto Repair</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="namecat" data-field="category">
+            <label>Business Category</label>
             <input type="text" id="bCategory" placeholder="e.g. Restaurant, Salon, Auto Repair">
           </div>
-        </div>
 
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">🖼️ Logo</div><div class="accPreview">Optional</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="logomenu" data-field="logo">
+            <label>Logo (optional)</label>
             <div id="logoUploadBtn" class="menuUploadBtn">🖼️ Click to add a logo</div>
             <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
             <div id="logoPreviewGrid"></div>
           </div>
-        </div>
-
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Overview</div><div class="accPreview">Description &amp; photos</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="logomenu" data-field="overview">
             <label>Description</label>
             <textarea id="bDescription" placeholder="Tell customers about your business"></textarea>
             <label>Photos (optional)</label>
@@ -206,11 +283,7 @@
             <div id="useUrlToggle" style="font-size:12px;color:#999;margin-top:6px;cursor:pointer;text-decoration:underline;">or paste an image link instead</div>
             <input type="text" id="bImageUrl" style="display:none;margin-top:6px;" placeholder="https://...">
           </div>
-        </div>
-
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Menu</div><div class="accPreview">Menu photos &amp; highlights</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="logomenu" data-field="menu">
             <label>Menu Photos</label>
             <div id="menuUploadBtn" class="menuUploadBtn">📋 Click to add menu photo(s)</div>
             <input type="file" id="menuFileInput" accept="image/*" multiple style="display:none;">
@@ -220,11 +293,8 @@
             <input type="file" id="highlightsFileInput" accept="image/*" multiple style="display:none;">
             <div id="highlightsPreviewGrid"></div>
           </div>
-        </div>
 
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">About</div><div class="accPreview">All optional</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="about" data-field="about">
             <label>Accessibility</label>
             <input type="text" id="aboutAccessibility" placeholder="e.g. Wheelchair accessible entrance">
             <label>Service Options</label>
@@ -246,36 +316,23 @@
             <label>Parking</label>
             <input type="text" id="aboutParking" placeholder="e.g. Free lot, Street parking">
           </div>
-        </div>
 
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Location</div><div class="accPreview">Address</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="locationinfo" data-field="location">
+            <label>Address</label>
             <input type="text" id="bAddress" placeholder="Street address, area">
           </div>
-        </div>
-
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Date &amp; Time Open</div><div class="accPreview">Set hours for each day</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="locationinfo" data-field="hours">
             <div id="hoursSummary" class="hoursSummary">Tap to set hours for each day</div>
             <div id="hoursEditor" class="hoursEditor" style="display:none;"></div>
           </div>
-        </div>
-
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Phone &amp; Email</div><div class="accPreview">Optional</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="locationinfo" data-field="contact">
             <label>Business Phone</label>
             <input type="text" id="bPhone" placeholder="e.g. (868) 555-1234">
             <label>Business Email</label>
             <input type="email" id="bEmail" placeholder="e.g. hello@yourbusiness.com">
           </div>
-        </div>
 
-        <div class="accRow">
-          <div class="accRowHeader"><div><div class="accLabel">Social Media Links</div><div class="accPreview">Optional</div></div><span class="accChevron">›</span></div>
-          <div class="accRowBody">
+          <div class="studioField" data-group="social" data-field="social">
             <label>Facebook</label>
             <input type="text" id="bSocialFacebook" placeholder="https://facebook.com/...">
             <label>Instagram</label>
@@ -285,9 +342,17 @@
           </div>
         </div>
 
+        <button id="addBizBtn" style="margin-top:20px;">Create Business</button>
+        <div class="msg" id="addMsg"></div>
       </div>
-      <button id="addBizBtn" style="margin-top:16px;">Create Business</button>
-      <div class="msg" id="addMsg"></div>
+    </div>
+
+    <div id="studioListingsPanel" style="display:none;">
+      <div class="card">
+        <button type="button" id="studioListingsClose" class="secondary" style="width:auto;padding:6px 12px;font-size:12px;margin-bottom:10px;">← Back to Studio</button>
+        <h2>Your Businesses</h2>
+        <div id="myListings"><p style="color:#999;font-size:13px;">Loading...</p></div>
+      </div>
     </div>
   </div>
 
@@ -335,6 +400,24 @@
 
 <script>
 let token = localStorage.getItem('ttp_token') || '';
+
+// ---------------- Dark / light mode ----------------
+function updateThemeIcon(){
+  document.getElementById('themeToggleBtn').textContent =
+    document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+}
+document.getElementById('themeToggleBtn').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark){
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('tt_theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('tt_theme', 'dark');
+  }
+  updateThemeIcon();
+});
+updateThemeIcon();
 
 function escapeHtml(s){
   return String(s || '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -634,12 +717,51 @@ function resetLogo(){
   renderLogoPreview();
 }
 
-// ---------------- Hiring toggle (create form) ----------------
-// ---------------- Accordion toggle (Create Your Business sections) ----------------
-document.querySelectorAll('#mainView .accRowHeader').forEach(header => {
-  header.addEventListener('click', () => {
-    header.closest('.accRow').classList.toggle('open');
+// ---------------- Studio sidebar navigation ----------------
+const STUDIO_FIELD_LABELS = {
+  name: 'Business Name', category: 'Business Category',
+  logo: 'Logo', overview: 'Overview', menu: 'Menu',
+  about: 'About',
+  location: 'Location', hours: 'Date & Time Open', contact: 'Phone & Email',
+  social: 'Social Media Links'
+};
+function showStudioGroup(group){
+  document.querySelectorAll('.studioNavItem').forEach(b => b.classList.toggle('active', b.dataset.group === group));
+  const fields = Array.from(document.querySelectorAll('.studioField[data-group="' + group + '"]'));
+  const subTabs = document.getElementById('studioSubTabs');
+  if (fields.length > 1){
+    subTabs.style.display = 'flex';
+    subTabs.innerHTML = fields.map((f, i) =>
+      `<button type="button" class="studioSubTabBtn${i === 0 ? ' active' : ''}" data-field="${f.dataset.field}">${STUDIO_FIELD_LABELS[f.dataset.field]}</button>`
+    ).join('');
+    subTabs.querySelectorAll('.studioSubTabBtn').forEach(btn => {
+      btn.addEventListener('click', () => showStudioField(group, btn.dataset.field));
+    });
+  } else {
+    subTabs.style.display = 'none';
+    subTabs.innerHTML = '';
+  }
+  if (fields.length) showStudioField(group, fields[0].dataset.field);
+}
+function showStudioField(group, field){
+  document.querySelectorAll('.studioField').forEach(f => {
+    f.classList.toggle('active', f.dataset.group === group && f.dataset.field === field);
   });
+  document.querySelectorAll('.studioSubTabBtn').forEach(b => b.classList.toggle('active', b.dataset.field === field));
+}
+document.querySelectorAll('.studioNavItem').forEach(btn => {
+  btn.addEventListener('click', () => showStudioGroup(btn.dataset.group));
+});
+showStudioGroup('namecat');
+
+document.getElementById('studioListingsBtn').addEventListener('click', () => {
+  document.getElementById('studioBody').style.display = 'none';
+  document.getElementById('studioListingsPanel').style.display = 'block';
+  loadMyListings();
+});
+document.getElementById('studioListingsClose').addEventListener('click', () => {
+  document.getElementById('studioListingsPanel').style.display = 'none';
+  document.getElementById('studioBody').style.display = 'flex';
 });
 
 function showView(view){
@@ -1104,6 +1226,9 @@ async function enterApp(){
   }
 
   document.getElementById('meEmail').textContent = data.email;
+  const initial = (data.email || '?').charAt(0).toUpperCase();
+  document.getElementById('studioAvatarBig').textContent = initial;
+  document.getElementById('studioTopAvatar').textContent = initial;
   showView('main');
   loadMyListings();
 

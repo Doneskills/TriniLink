@@ -5,12 +5,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TT Discover</title>
 <link rel="icon" type="image/svg+xml" href="/icon.svg">
+<script>
+  (function(){
+    var saved = localStorage.getItem('tt_theme');
+    if (saved === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+  })();
+</script>
 <style>
+  :root {
+    --bg: #fdf6ec; --text: #2a2a2a; --text-muted: #888; --text-muted2: #999;
+    --card-bg: #ffffff; --border: #eee; --input-bg: #ffffff; --input-border: #e8dcc8;
+    --modal-bg: #fdf6ec; --placeholder-bg: #f0d9c0;
+  }
+  [data-theme="dark"] {
+    --bg: #16181d; --text: #e8e6e3; --text-muted: #a9a9a9; --text-muted2: #999;
+    --card-bg: #22252b; --border: #33363d; --input-bg: #2a2d34; --input-border: #3a3d45;
+    --modal-bg: #1c1e24; --placeholder-bg: #3a3226;
+  }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     font-family: 'Segoe UI', system-ui, sans-serif;
-    background: #fdf6ec;
-    color: #2a2a2a;
+    background: var(--bg);
+    color: var(--text);
   }
   header {
     background: linear-gradient(135deg, #e0562f, #f2a33c);
@@ -32,31 +48,31 @@
   }
   .navBtn.avatarBtn.signedIn { background: #a8341f; border-color: #fff; font-weight: 700; font-size: 16px; }
   #accountDropdown {
-    display: none; position: absolute; top: 48px; right: 0; background: #fff; color: #2a2a2a;
+    display: none; position: absolute; top: 48px; right: 0; background: var(--card-bg); color: var(--text);
     border-radius: 10px; min-width: 220px; box-shadow: 0 4px 16px rgba(0,0,0,0.2);
     overflow: hidden; text-align: left; z-index: 20;
   }
-  #accountDropdown .ddRow { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid #eee; }
+  #accountDropdown .ddRow { padding: 12px 14px; font-size: 13px; border-bottom: 1px solid var(--border); }
   #accountDropdown a, #accountDropdown button {
     display: block; padding: 10px 14px; font-size: 13px; color: #e0562f; text-decoration: none;
     background: none; border: none; width: 100%; text-align: left; cursor: pointer; margin: 0;
   }
-  #accountDropdown a:hover, #accountDropdown button:hover { background: #fdf6ec; }
+  #accountDropdown a:hover, #accountDropdown button:hover { background: var(--bg); }
   #aboutModal {
     position: fixed; inset: 0; background: rgba(0,0,0,0.5);
     display: none; align-items: center; justify-content: center; z-index: 60; padding: 16px;
   }
   #aboutModal.open { display: flex; }
   #aboutPanel {
-    background: #fff; color: #2a2a2a; border-radius: 14px; padding: 24px 20px; max-width: 420px;
+    background: var(--card-bg); color: var(--text); border-radius: 14px; padding: 24px 20px; max-width: 420px;
     width: 100%; max-height: 85vh; overflow-y: auto; position: relative; text-align: left;
   }
   #aboutClose {
     position: absolute; top: 12px; right: 12px; width: 32px; height: 32px; border-radius: 50%;
-    border: none; background: #f0e4d0; color: #2a2a2a; font-size: 16px; cursor: pointer;
+    border: none; background: #f0e4d0; color: var(--text); font-size: 16px; cursor: pointer;
   }
   #aboutPanel h2 { font-size: 19px; margin-bottom: 10px; padding-right: 30px; }
-  #aboutPanel p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; color: #555; }
+  #aboutPanel p { font-size: 14px; line-height: 1.6; margin-bottom: 10px; color: var(--text-muted); }
   header h1 { font-size: 26px; letter-spacing: 0.5px; }
   header p { margin-top: 6px; font-size: 14px; opacity: 0.95; }
   .searchWrap { max-width: 480px; margin: 18px auto 0; padding: 0 12px; }
@@ -67,24 +83,24 @@
   main { max-width: 900px; margin: 0 auto; padding: 24px 16px 60px; }
   section { margin-bottom: 34px; }
   .sectionTitle {
-    font-size: 18px; font-weight: 700; margin-bottom: 12px; color: #2a2a2a;
+    font-size: 18px; font-weight: 700; margin-bottom: 12px; color: var(--text);
     display: flex; align-items: center; gap: 8px;
   }
   .cardGrid {
     display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 14px;
   }
   .card {
-    background: #fff; border-radius: 12px; overflow: hidden; cursor: pointer;
+    background: var(--card-bg); border-radius: 12px; overflow: hidden; cursor: pointer;
     box-shadow: 0 2px 8px rgba(0,0,0,0.08); transition: transform 0.15s;
   }
   .card:hover { transform: translateY(-2px); }
   .card .cardImg {
-    width: 100%; height: 120px; background: #f0d9c0; background-size: cover; background-position: center;
+    width: 100%; height: 120px; background: var(--placeholder-bg); background-size: cover; background-position: center;
     display: flex; align-items: center; justify-content: center; font-size: 32px;
   }
   .card .cardBody { padding: 12px 14px; }
   .card .cardName { font-weight: 700; font-size: 15px; }
-  .card .cardMeta { font-size: 12px; color: #888; margin-top: 3px; }
+  .card .cardMeta { font-size: 12px; color: var(--text-muted); margin-top: 3px; }
   .dealBadge {
     display: inline-block; margin-top: 6px; background: #e0562f; color: #fff;
     font-size: 11px; padding: 3px 8px; border-radius: 20px; font-weight: 600;
@@ -93,10 +109,10 @@
     display: inline-block; margin-bottom: 4px; background: #f2a33c; color: #fff;
     font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 700; letter-spacing: 0.3px;
   }
-  .emptyState { color: #999; font-size: 14px; padding: 20px 0; }
+  .emptyState { color: var(--text-muted2); font-size: 14px; padding: 20px 0; }
 
   #detailModal {
-    position: fixed; inset: 0; background: #fdf6ec; z-index: 50;
+    position: fixed; inset: 0; background: var(--bg); z-index: 50;
     overflow-y: auto; visibility: hidden; transform: translateY(100%);
     transition: transform 0.28s ease;
   }
@@ -110,27 +126,27 @@
     background: rgba(0,0,0,0.45); color: #fff; font-size: 18px; cursor: pointer;
     display: flex; align-items: center; justify-content: center;
   }
-  #detailMapWrap { height: 200px; margin-top: -52px; overflow: hidden; background: #f0d9c0; }
+  #detailMapWrap { height: 200px; margin-top: -52px; overflow: hidden; background: var(--placeholder-bg); }
   #detailMapWrap iframe { width: 100%; height: 100%; border: 0; display: block; }
   #detailContent { max-width: 600px; margin: 0 auto; padding: 20px 20px 60px; }
   #detailContent h2 { font-size: 22px; margin-bottom: 4px; }
-  #detailContent .meta { color: #888; font-size: 13px; margin-bottom: 10px; }
+  #detailContent .meta { color: var(--text-muted); font-size: 13px; margin-bottom: 10px; }
   #detailContent .desc { font-size: 14px; line-height: 1.5; margin-bottom: 14px; }
   #detailContent .row { font-size: 13px; margin-bottom: 6px; }
-  #detailContent .row b { color: #555; }
+  #detailContent .row b { color: var(--text); }
   .overviewPhoto { margin: 14px 0; }
   .overviewPhoto img { width: 100%; border-radius: 10px; display: block; }
   .logoThumb {
     width: 56px; height: 56px; border-radius: 12px; object-fit: cover;
-    display: block; margin-bottom: 8px; border: 1px solid #eee;
+    display: block; margin-bottom: 8px; border: 1px solid var(--border);
   }
   .detailTabRow {
-    display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid #eee;
-    position: sticky; top: 0; background: #fdf6ec; z-index: 1;
+    display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--bg); z-index: 1;
   }
   .detailTabBtn {
     flex: 1; padding: 10px 4px; background: none; border: none; font-size: 13px;
-    font-weight: 700; color: #999; cursor: pointer; border-bottom: 2px solid transparent;
+    font-weight: 700; color: var(--text-muted2); cursor: pointer; border-bottom: 2px solid transparent;
   }
   .detailTabBtn.active { color: #e0562f; border-bottom-color: #e0562f; }
   .menuPhotoGrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
@@ -139,13 +155,17 @@
     display: inline-block; margin-bottom: 10px; background: #2e7d32; color: #fff;
     font-size: 12px; padding: 4px 10px; border-radius: 20px; font-weight: 700;
   }
-  footer { text-align: center; padding: 20px; color: #aaa; font-size: 12px; }
+  footer { text-align: center; padding: 20px; color: var(--text-muted2); font-size: 12px; }
+  .postItem { border-bottom: 1px solid var(--border); padding: 12px 0; }
+  .postDate { font-size: 12px; color: var(--text-muted2); margin-bottom: 6px; }
+  .aboutRowsWrap { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 10px; }
 </style>
 </head>
 <body>
 
 <header>
   <div class="navBtns">
+    <div class="navBtn" id="themeToggleBtn" title="Toggle dark mode">🌙</div>
     <div class="navBtn pill" id="addBtn">+ Create</div>
     <div class="navBtn avatarBtn" id="accountBtn"><span id="avatarLetter">👤</span>
       <div id="accountDropdown"></div>
@@ -191,6 +211,24 @@
 
 <script>
 let allBusinesses = [];
+
+// ---------------- Dark / light mode ----------------
+function updateThemeIcon(){
+  document.getElementById('themeToggleBtn').textContent =
+    document.documentElement.getAttribute('data-theme') === 'dark' ? '☀️' : '🌙';
+}
+document.getElementById('themeToggleBtn').addEventListener('click', () => {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  if (isDark){
+    document.documentElement.removeAttribute('data-theme');
+    localStorage.setItem('tt_theme', 'light');
+  } else {
+    document.documentElement.setAttribute('data-theme', 'dark');
+    localStorage.setItem('tt_theme', 'dark');
+  }
+  updateThemeIcon();
+});
+updateThemeIcon();
 
 // ---------------- Nav buttons ----------------
 document.getElementById('addBtn').addEventListener('click', () => {
@@ -376,9 +414,9 @@ function renderDetailTabs(biz, activeTab){
     const posts = biz.posts || [];
     panelHtml = posts.length
       ? posts.map(p => `
-          <div style="border-bottom:1px solid #eee;padding:12px 0;">
+          <div class="postItem">
             <b style="font-size:14px;">${escapeHtml(p.title)}</b>
-            <div style="font-size:12px;color:#999;margin-bottom:6px;">${new Date(p.createdAt).toLocaleDateString()}</div>
+            <div class="postDate">${new Date(p.createdAt).toLocaleDateString()}</div>
             ${p.content ? `<div class="desc">${escapeHtml(p.content)}</div>` : ''}
             ${p.imageUrl ? `<div class="overviewPhoto"><img src="${p.imageUrl}"></div>` : ''}
           </div>
@@ -426,7 +464,7 @@ function renderDetailTabs(biz, activeTab){
       <div class="row"><b>Category:</b> ${escapeHtml(biz.category)}</div>
       <div class="row"><b>Area:</b> ${escapeHtml(biz.area)}</div>
       ${socialLinks ? `<div class="row" style="margin-top:10px;"><b>Find us:</b> ${socialLinks}</div>` : ''}
-      ${aboutRows ? `<div style="margin-top:14px;border-top:1px solid #eee;padding-top:10px;">${aboutRows}</div>` : ''}
+      ${aboutRows ? `<div class="aboutRowsWrap">${aboutRows}</div>` : ''}
     `;
   }
 

@@ -535,25 +535,25 @@ app.put('/api/my/businesses/:id', requireUser, requireBusinessAccount, async (re
       return res.status(403).json({ error: 'You can only edit your own listing.' });
     }
     const b = req.body || {};
-    const update = {
-      name: String(b.name || '').slice(0, 100),
-      description: String(b.description || '').slice(0, 500),
-      address: String(b.address || '').slice(0, 200),
-      phone: String(b.phone || '').slice(0, 40),
-      hours: sanitizeHours(b.hours),
-      imageUrl: String(b.imageUrl || '').slice(0, 400000)
-    };
-    if (b.category) update.category = String(b.category).slice(0, 40);
+    const update = {};
+    if (typeof b.name === 'string') update.name = b.name.slice(0, 100);
+    if (typeof b.category === 'string' && b.category) update.category = b.category.slice(0, 40);
+    if (typeof b.description === 'string') update.description = b.description.slice(0, 500);
+    if (typeof b.address === 'string') update.address = b.address.slice(0, 200);
+    if (typeof b.phone === 'string') update.phone = b.phone.slice(0, 40);
+    if (typeof b.email === 'string') update.email = b.email.slice(0, 150);
+    if (b.hours) update.hours = sanitizeHours(b.hours);
+    if (typeof b.imageUrl === 'string') update.imageUrl = b.imageUrl.slice(0, 400000);
+    if (typeof b.logoUrl === 'string') update.logoUrl = b.logoUrl.slice(0, 400000);
     if (Array.isArray(b.photos)) update.photos = sanitizePhotoArray(b.photos);
     if (Array.isArray(b.menuPhotos)) update.menuPhotos = sanitizePhotoArray(b.menuPhotos);
     if (Array.isArray(b.highlights)) update.highlights = sanitizePhotoArray(b.highlights);
     if (typeof b.hiring === 'boolean') update.hiring = b.hiring;
     if (b.about) update.about = sanitizeAbout(b.about);
     if (b.social) update.social = sanitizeSocial(b.social);
-    if (typeof b.logoUrl === 'string') update.logoUrl = b.logoUrl.slice(0, 400000);
-    if (typeof b.email === 'string') update.email = b.email.slice(0, 150);
+    if (!Object.keys(update).length) return res.status(400).json({ error: 'Nothing to update.' });
     await businessesCol.updateOne({ _id: biz._id }, { $set: update });
-    res.json({ ok: true });
+    res.json({ ok: true, business: { ...biz, ...update } });
   } catch (err) {
     res.status(500).json({ error: 'Could not update business.' });
   }
