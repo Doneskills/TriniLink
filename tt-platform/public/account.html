@@ -137,6 +137,9 @@
   #premiumPopupPanel h2 { font-size: 19px; margin-bottom: 10px; padding-right: 30px; }
 
   /* ---------------- TT Discover Studio shell ---------------- */
+  #mainView {
+    width: 100vw; margin-left: calc(-50vw + 50%); margin-right: calc(-50vw + 50%);
+  }
   #studioTopBar {
     display: flex; align-items: center; justify-content: flex-end; gap: 14px;
     padding: 10px 16px; background: var(--card-bg); border-bottom: 1px solid var(--input-border);
@@ -169,8 +172,9 @@
     display: block; text-align: center; margin-top: 16px; font-size: 12px;
     color: var(--text-muted); text-decoration: none; padding-top: 12px; border-top: 1px solid var(--soft-bg);
   }
-  #studioMain { flex: 1; padding: 20px; min-width: 0; }
+  #studioMain { flex: 1; padding: 20px 32px; min-width: 0; max-width: 720px; }
   #studioMain h2 { font-size: 19px; margin-bottom: 12px; }
+  #studioListingsPanel { padding: 24px 32px; max-width: 720px; }
   .studioField { display: none; }
   .studioField.active { display: block; }
   @media (max-width: 640px) {
