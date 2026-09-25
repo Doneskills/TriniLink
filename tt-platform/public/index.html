@@ -136,10 +136,6 @@
   #detailContent .row b { color: var(--text); }
   .overviewPhoto { margin: 14px 0; }
   .overviewPhoto img { width: 100%; border-radius: 10px; display: block; }
-  .logoThumb {
-    width: 56px; height: 56px; border-radius: 12px; object-fit: cover;
-    display: block; margin-bottom: 8px; border: 1px solid var(--border);
-  }
   .detailTabRow {
     display: flex; gap: 4px; margin-bottom: 16px; border-bottom: 1px solid var(--border);
     position: sticky; top: 0; background: var(--bg); z-index: 1;
@@ -400,7 +396,6 @@ function renderDetailTabs(biz, activeTab){
   let panelHtml = '';
   if (activeTab === 'overview'){
     panelHtml = `
-      ${biz.logoUrl ? `<img src="${biz.logoUrl}" class="logoThumb">` : ''}
       <h2>${escapeHtml(biz.name)}</h2>
       <div class="meta">${escapeHtml(biz.category)} · ${escapeHtml(biz.area)}</div>
       ${biz.hiring ? '<div class="hiringBadge">📢 Hiring Now</div>' : ''}

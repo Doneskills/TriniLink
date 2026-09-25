@@ -493,7 +493,6 @@ app.post('/api/my/businesses', requireUser, requireBusinessAccount, async (req, 
       ownerId: req.user._id.toString(),
       name: String(b.name || '').slice(0, 100),
       category: String(b.category || 'Food').slice(0, 40),
-      logoUrl: String(b.logoUrl || '').slice(0, 400000),
       area: String(b.area || 'Port of Spain').slice(0, 60),
       description: String(b.description || '').slice(0, 500),
       address: String(b.address || '').slice(0, 200),
@@ -540,11 +539,11 @@ app.put('/api/my/businesses/:id', requireUser, requireBusinessAccount, async (re
     if (typeof b.category === 'string' && b.category) update.category = b.category.slice(0, 40);
     if (typeof b.description === 'string') update.description = b.description.slice(0, 500);
     if (typeof b.address === 'string') update.address = b.address.slice(0, 200);
+    if (typeof b.area === 'string' && b.area) update.area = b.area.slice(0, 60);
     if (typeof b.phone === 'string') update.phone = b.phone.slice(0, 40);
     if (typeof b.email === 'string') update.email = b.email.slice(0, 150);
     if (b.hours) update.hours = sanitizeHours(b.hours);
     if (typeof b.imageUrl === 'string') update.imageUrl = b.imageUrl.slice(0, 400000);
-    if (typeof b.logoUrl === 'string') update.logoUrl = b.logoUrl.slice(0, 400000);
     if (Array.isArray(b.photos)) update.photos = sanitizePhotoArray(b.photos);
     if (Array.isArray(b.menuPhotos)) update.menuPhotos = sanitizePhotoArray(b.menuPhotos);
     if (Array.isArray(b.highlights)) update.highlights = sanitizePhotoArray(b.highlights);

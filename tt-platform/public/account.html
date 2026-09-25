@@ -249,7 +249,7 @@
         </div>
         <nav id="studioNav">
           <button type="button" class="studioNavItem" data-group="namecat">Business Name</button>
-          <button type="button" class="studioNavItem" data-group="logomenu">Logo</button>
+          <button type="button" class="studioNavItem" data-group="logomenu">Overview</button>
           <button type="button" class="studioNavItem" data-group="about">About</button>
           <button type="button" class="studioNavItem" data-group="locationinfo">Location</button>
           <button type="button" class="studioNavItem" data-group="social">Social Media Links</button>
@@ -271,12 +271,6 @@
             <input type="text" id="bCategory" placeholder="e.g. Restaurant, Salon, Auto Repair">
           </div>
 
-          <div class="studioField" data-group="logomenu" data-field="logo">
-            <label>Logo (optional)</label>
-            <div id="logoUploadBtn" class="menuUploadBtn">🖼️ Click to add a logo</div>
-            <input type="file" id="logoFileInput" accept="image/*" style="display:none;">
-            <div id="logoPreviewGrid"></div>
-          </div>
           <div class="studioField" data-group="logomenu" data-field="overview">
             <label>Description</label>
             <textarea id="bDescription" placeholder="Tell customers about your business"></textarea>
@@ -324,6 +318,8 @@
           <div class="studioField" data-group="locationinfo" data-field="location">
             <label>Address</label>
             <input type="text" id="bAddress" placeholder="Street address, area">
+            <label>Area</label>
+            <input type="text" id="bArea" placeholder="e.g. Arouca, San Fernando, Chaguanas">
           </div>
           <div class="studioField" data-group="locationinfo" data-field="hours">
             <div id="hoursSummary" class="hoursSummary">Tap to set hours for each day</div>
@@ -670,61 +666,10 @@ function resetHighlights(){
   renderHighlightPreviews();
 }
 
-// ---------------- Logo (single image, click-to-upload) ----------------
-let logoState = '';
-const logoFileInput = document.getElementById('logoFileInput');
-document.getElementById('logoUploadBtn').addEventListener('click', () => logoFileInput.click());
-logoFileInput.addEventListener('change', (e) => {
-  if (e.target.files[0]) handleLogoFile(e.target.files[0]);
-  logoFileInput.value = '';
-});
-
-function handleLogoFile(file){
-  if (!file.type.startsWith('image/')){ alert('Please choose an image file.'); return; }
-  const reader = new FileReader();
-  reader.onload = (evt) => {
-    const img = new Image();
-    img.onload = () => {
-      const maxDim = 500;
-      let w = img.width, h = img.height;
-      if (w > maxDim || h > maxDim){
-        if (w > h){ h = Math.round(h * maxDim / w); w = maxDim; }
-        else { w = Math.round(w * maxDim / h); h = maxDim; }
-      }
-      const canvas = document.createElement('canvas');
-      canvas.width = w; canvas.height = h;
-      canvas.getContext('2d').drawImage(img, 0, 0, w, h);
-      logoState = canvas.toDataURL('image/jpeg', 0.85);
-      renderLogoPreview();
-    };
-    img.src = evt.target.result;
-  };
-  reader.readAsDataURL(file);
-}
-
-function renderLogoPreview(){
-  const grid = document.getElementById('logoPreviewGrid');
-  grid.innerHTML = '';
-  if (!logoState) return;
-  const wrap = document.createElement('div');
-  wrap.className = 'menuPhotoPreview';
-  wrap.innerHTML = `<img src="${logoState}"><div class="removeBtn">✕</div>`;
-  wrap.querySelector('.removeBtn').addEventListener('click', () => {
-    logoState = '';
-    renderLogoPreview();
-  });
-  grid.appendChild(wrap);
-}
-
-function resetLogo(){
-  logoState = '';
-  renderLogoPreview();
-}
-
 // ---------------- Studio sidebar navigation ----------------
 const STUDIO_FIELD_LABELS = {
   name: 'Business Name', category: 'Business Category',
-  logo: 'Logo', overview: 'Overview', menu: 'Menu',
+  overview: 'Overview', menu: 'Menu',
   about: 'About',
   location: 'Location', hours: 'Date & Time Open', contact: 'Phone & Email',
   social: 'Social Media Links'
@@ -857,9 +802,9 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
   const body = {
     name: document.getElementById('bName').value,
     category: document.getElementById('bCategory').value,
-    logoUrl: logoState,
     description: document.getElementById('bDescription').value,
     address: document.getElementById('bAddress').value,
+    area: document.getElementById('bArea').value,
     phone: document.getElementById('bPhone').value,
     email: document.getElementById('bEmail').value,
     hours: hoursState,
@@ -894,7 +839,7 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     const data = await res.json();
     if (res.ok){
       document.getElementById('addMsg').textContent = 'Created! It\'s live on the site now.';
-      ['bName','bCategory','bDescription','bAddress','bPhone','bEmail','bImageUrl',
+      ['bName','bCategory','bDescription','bAddress','bArea','bPhone','bEmail','bImageUrl',
        'aboutAccessibility','aboutServiceOptions','aboutPopularFor','aboutOfferings','aboutDiningOptions',
        'aboutAtmosphere','aboutCrowd','aboutPayments','aboutChildren','aboutParking',
        'bSocialFacebook','bSocialInstagram','bSocialWebsite'].forEach(id => {
@@ -904,7 +849,6 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
       resetHoursPicker();
       resetMenuPhotos();
       resetHighlights();
-      resetLogo();
       loadMyListings();
       maybeShowPremiumPopupAfterGoLive();
     } else {
