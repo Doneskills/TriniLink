@@ -1109,6 +1109,22 @@ async function loadMyListings(){
     viewLink.target = '_blank';
     viewLink.textContent = '🔗 View Page';
     viewLink.style.cssText = 'font-size:12px;color:#e0562f;text-decoration:none;margin-right:10px;';
+    const hiringBtn = document.createElement('button');
+    hiringBtn.className = 'hiringBtn' + (biz.hiring ? ' on' : '');
+    hiringBtn.textContent = biz.hiring ? '✅ Hiring Now' : '📢 Not Hiring';
+    hiringBtn.addEventListener('click', async () => {
+      const newVal = !biz.hiring;
+      const res = await fetch('/api/my/businesses/' + biz._id + '/hiring', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify({ hiring: newVal })
+      });
+      if (res.ok){
+        biz.hiring = newVal;
+        hiringBtn.className = 'hiringBtn' + (newVal ? ' on' : '');
+        hiringBtn.textContent = newVal ? '✅ Hiring Now' : '📢 Not Hiring';
+      }
+    });
     const postsBtn = document.createElement('button');
     postsBtn.className = 'secondary';
     postsBtn.style.cssText = 'width:auto;padding:6px 12px;font-size:12px;margin:0;';
@@ -1133,6 +1149,7 @@ async function loadMyListings(){
       loadMyListings();
     });
     row.appendChild(viewLink);
+    row.appendChild(hiringBtn);
     row.appendChild(postsBtn);
     row.appendChild(delBtn);
     row.appendChild(postsPanel);
