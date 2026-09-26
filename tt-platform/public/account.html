@@ -236,6 +236,7 @@
         <span class="studioTopIcon" title="Help">❓</span>
         <span class="studioTopIcon" title="Notifications">🔔</span>
       </div>
+      <button id="studioNewBtn" class="secondary" style="width:auto;padding:8px 14px;font-size:13px;margin:0;">+ New Business</button>
       <button id="studioListingsBtn" class="secondary" style="width:auto;padding:8px 14px;font-size:13px;margin:0;">📋 Your Businesses</button>
       <div class="studioAvatar" id="studioTopAvatar"></div>
     </div>
@@ -258,7 +259,13 @@
       </div>
 
       <div id="studioMain">
-        <h2>Create Your Business</h2>
+        <h2 id="studioFormHeading">Create Your Business</h2>
+        <div id="studioStatsBar" style="display:none;flex-wrap:wrap;gap:8px;margin-bottom:16px;">
+          <span id="statRating" class="planBadge"></span>
+          <span id="statReviews" class="planBadge"></span>
+          <span id="statHiring" class="planBadge"></span>
+          <span id="statPhotos" class="planBadge"></span>
+        </div>
         <div id="studioSubTabs" class="tabRow" style="display:none;"></div>
 
         <div id="studioFields">
@@ -400,6 +407,7 @@
 
 <script>
 let token = localStorage.getItem('ttp_token') || '';
+let currentBizId = null;
 
 // ---------------- Dark / light mode ----------------
 function updateThemeIcon(){
@@ -477,6 +485,10 @@ function resetImagePicker(){
   renderPhotoPreviews();
   imageUrlInput.value = '';
   imageUrlInput.style.display = 'none';
+}
+function loadPhotosIntoPicker(photos){
+  photosState = Array.isArray(photos) ? photos.slice() : [];
+  renderPhotoPreviews();
 }
 document.getElementById('useUrlToggle').addEventListener('click', () => {
   imageUrlInput.style.display = imageUrlInput.style.display === 'none' ? 'block' : 'none';
@@ -557,6 +569,16 @@ function resetHoursPicker(){
   document.getElementById('hoursEditor').style.display = 'none';
 }
 
+function loadHoursIntoPicker(hours){
+  hoursState = {};
+  DAYS.forEach(d => {
+    const src = (hours && hours[d.key]) || {};
+    hoursState[d.key] = { open: src.open || '09:00', close: src.close || '17:00', closed: !!src.closed };
+  });
+  buildHoursEditor();
+  updateHoursSummary();
+}
+
 buildHoursEditor();
 updateHoursSummary();
 
@@ -612,6 +634,10 @@ function resetMenuPhotos(){
   menuPhotosState = [];
   renderMenuPreviews();
 }
+function loadMenuPhotosIntoPicker(photos){
+  menuPhotosState = Array.isArray(photos) ? photos.slice() : [];
+  renderMenuPreviews();
+}
 
 // ---------------- Highlights photos (multiple, click-to-upload) ----------------
 let highlightsState = [];
@@ -663,6 +689,10 @@ function renderHighlightPreviews(){
 
 function resetHighlights(){
   highlightsState = [];
+  renderHighlightPreviews();
+}
+function loadHighlightsIntoPicker(photos){
+  highlightsState = Array.isArray(photos) ? photos.slice() : [];
   renderHighlightPreviews();
 }
 
@@ -797,8 +827,84 @@ document.getElementById('logoutBtn').addEventListener('click', (e) => {
   showView('auth');
 });
 
+function updateStudioModeUI(biz){
+  const heading = document.getElementById('studioFormHeading');
+  const saveBtn = document.getElementById('addBizBtn');
+  const statsBar = document.getElementById('studioStatsBar');
+  if (biz){
+    heading.textContent = 'Your Business';
+    saveBtn.textContent = 'Save Changes';
+    statsBar.style.display = 'flex';
+    document.getElementById('statRating').textContent = '⭐ No ratings yet';
+    document.getElementById('statReviews').textContent = '💬 Reviews coming soon';
+    document.getElementById('statHiring').textContent = biz.hiring ? '📢 Hiring Now' : '📢 Not Hiring';
+    const photoCount = (biz.photos || []).length + (biz.menuPhotos || []).length + (biz.highlights || []).length;
+    document.getElementById('statPhotos').textContent = `🖼️ ${photoCount} photo${photoCount === 1 ? '' : 's'}`;
+  } else {
+    heading.textContent = 'Create Your Business';
+    saveBtn.textContent = 'Create Business';
+    statsBar.style.display = 'none';
+  }
+}
+
+function populateStudioForm(biz){
+  currentBizId = biz._id;
+  document.getElementById('bName').value = biz.name || '';
+  document.getElementById('bCategory').value = biz.category || '';
+  document.getElementById('bDescription').value = biz.description || '';
+  document.getElementById('bAddress').value = biz.address || '';
+  document.getElementById('bArea').value = biz.area || '';
+  document.getElementById('bPhone').value = biz.phone || '';
+  document.getElementById('bEmail').value = biz.email || '';
+  document.getElementById('bImageUrl').value = '';
+  const about = biz.about || {};
+  document.getElementById('aboutAccessibility').value = about.accessibility || '';
+  document.getElementById('aboutServiceOptions').value = about.serviceOptions || '';
+  document.getElementById('aboutPopularFor').value = about.popularFor || '';
+  document.getElementById('aboutOfferings').value = about.offerings || '';
+  document.getElementById('aboutDiningOptions').value = about.diningOptions || '';
+  document.getElementById('aboutAtmosphere').value = about.atmosphere || '';
+  document.getElementById('aboutCrowd').value = about.crowd || '';
+  document.getElementById('aboutPayments').value = about.payments || '';
+  document.getElementById('aboutChildren').value = about.children || '';
+  document.getElementById('aboutParking').value = about.parking || '';
+  const social = biz.social || {};
+  document.getElementById('bSocialFacebook').value = social.facebook || '';
+  document.getElementById('bSocialInstagram').value = social.instagram || '';
+  document.getElementById('bSocialWebsite').value = social.website || '';
+  loadHoursIntoPicker(biz.hours);
+  loadPhotosIntoPicker(biz.photos);
+  loadMenuPhotosIntoPicker(biz.menuPhotos);
+  loadHighlightsIntoPicker(biz.highlights);
+  updateStudioModeUI(biz);
+  document.getElementById('addMsg').textContent = '';
+}
+
+function clearStudioForm(){
+  currentBizId = null;
+  ['bName','bCategory','bDescription','bAddress','bArea','bPhone','bEmail','bImageUrl',
+   'aboutAccessibility','aboutServiceOptions','aboutPopularFor','aboutOfferings','aboutDiningOptions',
+   'aboutAtmosphere','aboutCrowd','aboutPayments','aboutChildren','aboutParking',
+   'bSocialFacebook','bSocialInstagram','bSocialWebsite'].forEach(id => {
+    document.getElementById(id).value = '';
+  });
+  resetImagePicker();
+  resetHoursPicker();
+  resetMenuPhotos();
+  resetHighlights();
+  updateStudioModeUI(null);
+  document.getElementById('addMsg').textContent = '';
+}
+
+document.getElementById('studioNewBtn').addEventListener('click', () => {
+  clearStudioForm();
+  document.getElementById('studioListingsPanel').style.display = 'none';
+  document.getElementById('studioBody').style.display = 'flex';
+});
+
 document.getElementById('addBizBtn').addEventListener('click', async () => {
-  document.getElementById('addMsg').textContent = 'Creating...';
+  const isEditing = !!currentBizId;
+  document.getElementById('addMsg').textContent = isEditing ? 'Saving...' : 'Creating...';
   const body = {
     name: document.getElementById('bName').value,
     category: document.getElementById('bCategory').value,
@@ -831,28 +937,26 @@ document.getElementById('addBizBtn').addEventListener('click', async () => {
     }
   };
   try {
-    const res = await fetch('/api/my/businesses', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
-      body: JSON.stringify(body)
-    });
+    const res = await fetch(
+      isEditing ? '/api/my/businesses/' + currentBizId : '/api/my/businesses',
+      {
+        method: isEditing ? 'PUT' : 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-auth-token': token },
+        body: JSON.stringify(body)
+      }
+    );
     const data = await res.json();
     if (res.ok){
-      document.getElementById('addMsg').textContent = 'Created! It\'s live on the site now.';
-      ['bName','bCategory','bDescription','bAddress','bArea','bPhone','bEmail','bImageUrl',
-       'aboutAccessibility','aboutServiceOptions','aboutPopularFor','aboutOfferings','aboutDiningOptions',
-       'aboutAtmosphere','aboutCrowd','aboutPayments','aboutChildren','aboutParking',
-       'bSocialFacebook','bSocialInstagram','bSocialWebsite'].forEach(id => {
-        document.getElementById(id).value = '';
-      });
-      resetImagePicker();
-      resetHoursPicker();
-      resetMenuPhotos();
-      resetHighlights();
-      loadMyListings();
-      maybeShowPremiumPopupAfterGoLive();
+      if (isEditing){
+        document.getElementById('addMsg').textContent = 'Saved!';
+        updateStudioModeUI({ ...body, hiring: data.business ? data.business.hiring : undefined });
+      } else {
+        document.getElementById('addMsg').textContent = 'Created! It\'s live on the site now.';
+        populateStudioForm(data.business || { ...body, _id: data.id || data._id });
+        maybeShowPremiumPopupAfterGoLive();
+      }
     } else {
-      document.getElementById('addMsg').textContent = data.error || 'Could not add business.';
+      document.getElementById('addMsg').textContent = data.error || 'Could not save business.';
     }
   } catch (err) {
     document.getElementById('addMsg').textContent = 'Something went wrong sending that — please try again.';
@@ -1038,16 +1142,28 @@ function buildEditPanel(container, biz){
   });
 }
 
-async function loadMyListings(){
+async function loadMyListings(isInitial){
   const res = await fetch('/api/my/businesses', { headers: { 'x-auth-token': token } });
   if (!res.ok) return;
   const list = await res.json();
   const box = document.getElementById('myListings');
   box.innerHTML = list.length ? '' : '<p style="color:#999;font-size:13px;">You haven\'t created any businesses yet.</p>';
+  if (isInitial && list.length && !currentBizId){
+    populateStudioForm(list[0]);
+  }
   list.forEach(biz => {
     const row = document.createElement('div');
     row.className = 'listingRow';
-    row.innerHTML = `<span>${escapeHtml(biz.name)}</span>`;
+    const nameBtn = document.createElement('span');
+    nameBtn.textContent = biz.name;
+    nameBtn.style.cssText = 'cursor:pointer;font-weight:600;text-decoration:underline;text-decoration-style:dotted;';
+    nameBtn.title = 'Edit this business in Studio';
+    nameBtn.addEventListener('click', () => {
+      populateStudioForm(biz);
+      document.getElementById('studioListingsPanel').style.display = 'none';
+      document.getElementById('studioBody').style.display = 'flex';
+    });
+    row.appendChild(nameBtn);
     const viewLink = document.createElement('a');
     viewLink.href = '/biz/' + biz._id;
     viewLink.target = '_blank';
@@ -1090,6 +1206,7 @@ async function loadMyListings(){
     delBtn.textContent = 'Delete';
     delBtn.addEventListener('click', async () => {
       await fetch('/api/my/businesses/' + biz._id, { method: 'DELETE', headers: { 'x-auth-token': token } });
+      if (currentBizId === biz._id) clearStudioForm();
       loadMyListings();
     });
     row.appendChild(viewLink);
@@ -1195,7 +1312,7 @@ async function enterApp(){
   document.getElementById('studioAvatarBig').textContent = initial;
   document.getElementById('studioTopAvatar').textContent = initial;
   showView('main');
-  loadMyListings();
+  loadMyListings(true);
 
   const params = new URLSearchParams(window.location.search);
   if (params.get('premium') === 'success'){

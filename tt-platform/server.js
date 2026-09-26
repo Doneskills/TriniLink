@@ -519,7 +519,7 @@ app.post('/api/my/businesses', requireUser, requireBusinessAccount, async (req, 
       });
     }
     const result = await businessesCol.insertOne(doc);
-    res.json({ ok: true, id: result.insertedId });
+    res.json({ ok: true, id: result.insertedId, business: { ...doc, _id: result.insertedId } });
   } catch (err) {
     console.error('Add business failed:', err.message);
     res.status(500).json({ error: 'Could not add business.' });
