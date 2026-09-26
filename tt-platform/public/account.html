@@ -58,6 +58,25 @@
     display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;
     padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px;
   }
+  .bizTableWrap { overflow-x: auto; }
+  .bizTable { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+  .bizTable th {
+    text-align: left; padding: 10px 10px; border-bottom: 2px solid var(--border);
+    color: var(--text-muted); font-size: 11px; text-transform: uppercase; font-weight: 700;
+  }
+  .bizTable td { padding: 10px 10px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  .bizTable tr:last-child td { border-bottom: none; }
+  .bizNameCell { display: flex; align-items: center; gap: 10px; white-space: normal; min-width: 160px; }
+  .bizThumb {
+    width: 42px; height: 42px; border-radius: 8px; object-fit: cover; flex-shrink: 0;
+    background: var(--input-bg); display: flex; align-items: center; justify-content: center; font-size: 18px;
+  }
+  .bizNameText { font-weight: 700; }
+  .bizMetaText { font-size: 12px; color: var(--text-muted); }
+  .bizActionsCell { display: flex; gap: 6px; flex-wrap: wrap; }
+  .bizActionsCell button, .bizActionsCell a {
+    font-size: 11px; padding: 5px 9px; margin: 0; width: auto;
+  }
   .planBadge {
     display: inline-block; background: var(--soft-bg); color: #7a5c30; padding: 4px 10px;
     border-radius: 20px; font-size: 12px; font-weight: 700;
@@ -1147,28 +1166,59 @@ async function loadMyListings(isInitial){
   if (!res.ok) return;
   const list = await res.json();
   const box = document.getElementById('myListings');
-  box.innerHTML = list.length ? '' : '<p style="color:#999;font-size:13px;">You haven\'t created any businesses yet.</p>';
   if (isInitial && list.length && !currentBizId){
     populateStudioForm(list[0]);
   }
+  if (!list.length){
+    box.innerHTML = '<p style="color:#999;font-size:13px;">You haven\'t created any businesses yet.</p>';
+    return;
+  }
+  const wrap = document.createElement('div');
+  wrap.className = 'bizTableWrap';
+  const table = document.createElement('table');
+  table.className = 'bizTable';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th>Business</th>
+        <th>Category</th>
+        <th>Hiring</th>
+        <th>Created</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="bizTableBody"></tbody>
+  `;
+  wrap.appendChild(table);
+  box.innerHTML = '';
+  box.appendChild(wrap);
+  const tbody = table.querySelector('#bizTableBody');
+
   list.forEach(biz => {
-    const row = document.createElement('div');
-    row.className = 'listingRow';
-    const nameBtn = document.createElement('span');
-    nameBtn.textContent = biz.name;
-    nameBtn.style.cssText = 'cursor:pointer;font-weight:600;text-decoration:underline;text-decoration-style:dotted;';
-    nameBtn.title = 'Edit this business in Studio';
-    nameBtn.addEventListener('click', () => {
+    const row = document.createElement('tr');
+
+    const nameCell = document.createElement('td');
+    const nameWrap = document.createElement('div');
+    nameWrap.className = 'bizNameCell';
+    const thumbSrc = biz.imageUrl || (biz.photos && biz.photos[0]) || '';
+    const thumb = thumbSrc
+      ? `<img src="${thumbSrc}" class="bizThumb">`
+      : `<div class="bizThumb">🏪</div>`;
+    nameWrap.innerHTML = `${thumb}<div>
+      <div class="bizNameText" style="cursor:pointer;" title="Edit this business in Studio">${escapeHtml(biz.name)}</div>
+      <div class="bizMetaText">${escapeHtml(biz.area || '')}</div>
+    </div>`;
+    nameWrap.querySelector('.bizNameText').addEventListener('click', () => {
       populateStudioForm(biz);
       document.getElementById('studioListingsPanel').style.display = 'none';
       document.getElementById('studioBody').style.display = 'flex';
     });
-    row.appendChild(nameBtn);
-    const viewLink = document.createElement('a');
-    viewLink.href = '/biz/' + biz._id;
-    viewLink.target = '_blank';
-    viewLink.textContent = '🔗 View Page';
-    viewLink.style.cssText = 'font-size:12px;color:#e0562f;text-decoration:none;margin-right:10px;';
+    nameCell.appendChild(nameWrap);
+
+    const categoryCell = document.createElement('td');
+    categoryCell.textContent = biz.category || '—';
+
+    const hiringCell = document.createElement('td');
     const hiringBtn = document.createElement('button');
     hiringBtn.className = 'hiringBtn' + (biz.hiring ? ' on' : '');
     hiringBtn.textContent = biz.hiring ? '✅ Hiring Now' : '📢 Not Hiring';
@@ -1185,22 +1235,21 @@ async function loadMyListings(isInitial){
         hiringBtn.textContent = newVal ? '✅ Hiring Now' : '📢 Not Hiring';
       }
     });
+    hiringCell.appendChild(hiringBtn);
+
+    const dateCell = document.createElement('td');
+    dateCell.textContent = biz.createdAt ? new Date(biz.createdAt).toLocaleDateString() : '—';
+
+    const actionsCell = document.createElement('td');
+    actionsCell.className = 'bizActionsCell';
+    const viewLink = document.createElement('a');
+    viewLink.href = '/biz/' + biz._id;
+    viewLink.target = '_blank';
+    viewLink.textContent = '🔗 View';
+    viewLink.style.cssText = 'color:#e0562f;text-decoration:none;';
     const postsBtn = document.createElement('button');
     postsBtn.className = 'secondary';
-    postsBtn.style.cssText = 'width:auto;padding:6px 12px;font-size:12px;margin:0;';
     postsBtn.textContent = '📢 Posts';
-    const postsPanel = document.createElement('div');
-    postsPanel.style.cssText = 'width:100%;display:none;margin-top:10px;padding-top:10px;border-top:1px dashed #e8dcc8;';
-    postsBtn.addEventListener('click', () => {
-      if (postsPanel.style.display === 'none'){
-        buildPostsPanel(postsPanel, biz);
-        postsPanel.style.display = 'block';
-        postsBtn.textContent = 'Close';
-      } else {
-        postsPanel.style.display = 'none';
-        postsBtn.textContent = '📢 Posts';
-      }
-    });
     const delBtn = document.createElement('button');
     delBtn.className = 'danger';
     delBtn.textContent = 'Delete';
@@ -1209,12 +1258,39 @@ async function loadMyListings(isInitial){
       if (currentBizId === biz._id) clearStudioForm();
       loadMyListings();
     });
-    row.appendChild(viewLink);
-    row.appendChild(hiringBtn);
-    row.appendChild(postsBtn);
-    row.appendChild(delBtn);
-    row.appendChild(postsPanel);
-    box.appendChild(row);
+    actionsCell.appendChild(viewLink);
+    actionsCell.appendChild(postsBtn);
+    actionsCell.appendChild(delBtn);
+
+    row.appendChild(nameCell);
+    row.appendChild(categoryCell);
+    row.appendChild(hiringCell);
+    row.appendChild(dateCell);
+    row.appendChild(actionsCell);
+    tbody.appendChild(row);
+
+    const postsRow = document.createElement('tr');
+    const postsCell = document.createElement('td');
+    postsCell.colSpan = 5;
+    const postsPanel = document.createElement('div');
+    postsPanel.style.cssText = 'display:none;padding:10px 0;';
+    postsCell.appendChild(postsPanel);
+    postsRow.appendChild(postsCell);
+    postsRow.style.display = 'none';
+    postsBtn.addEventListener('click', () => {
+      const isOpen = postsRow.style.display !== 'none';
+      if (!isOpen){
+        buildPostsPanel(postsPanel, biz);
+        postsPanel.style.display = 'block';
+        postsRow.style.display = 'table-row';
+        postsBtn.textContent = 'Close';
+      } else {
+        postsPanel.style.display = 'none';
+        postsRow.style.display = 'none';
+        postsBtn.textContent = '📢 Posts';
+      }
+    });
+    tbody.appendChild(postsRow);
   });
 }
 
